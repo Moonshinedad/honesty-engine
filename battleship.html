@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Battleship — The Honesty Engine</title>
+<style>
+  :root{
+    --ink:#f6eeda; --muted:#c4a77e; --night:#14100b; --panel:#241a10; --panel2:#322413;
+    --sea:#3d2a15; --sea2:#241a0e; --gold:#e7a83e; --gold2:#ffcf6b; --red:#d14a43;
+    --hit:#e06055; --miss:#6e5f4a; --ship:#e0a83e; --line:rgba(255,210,140,.14);
+    --copper:#c97e2e;
+  }
+  *{box-sizing:border-box}
+  html{min-height:100%;background:var(--night)}
+  body{margin:0;min-height:100vh;color:var(--ink);background:var(--night);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;overflow-x:hidden}
+  /* ---- Smoky Mountain moonshine dusk scene: ambient, behind everything ---- */
+  .scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+    background:linear-gradient(#140e28 0%,#33203f 30%,#6e2f33 47%,#c2702f 58%,#2a1608 66%,#14100b 100%)}
+  .stars{position:absolute;left:0;right:0;top:0;height:42%;opacity:.75;background-image:
+    radial-gradient(1.5px 1.5px at 12% 22%,rgba(255,255,255,.9),transparent),
+    radial-gradient(1px 1px at 28% 8%,rgba(255,255,255,.7),transparent),
+    radial-gradient(1.5px 1.5px at 44% 30%,rgba(255,255,255,.8),transparent),
+    radial-gradient(1px 1px at 61% 12%,rgba(255,255,255,.7),transparent),
+    radial-gradient(1.5px 1.5px at 76% 26%,rgba(255,255,255,.85),transparent),
+    radial-gradient(1px 1px at 90% 10%,rgba(255,255,255,.7),transparent)}
+  .moon{position:absolute;top:8%;left:11%;width:56px;height:56px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#ffedbe,#e8a94e 72%);
+    box-shadow:0 0 44px 14px rgba(255,200,110,.22)}
+  .ridge{position:absolute;left:0;width:100%;bottom:0}
+  .ridge.far{height:46%;color:#2c1b3d}
+  .ridge.near{height:30%;color:#100b07}
+  .ridge path{fill:currentColor}
+  .billboard{position:absolute;top:6%;right:4%;width:min(230px,44vw);transform:rotate(1.5deg)}
+  .billboard::before,.billboard::after{content:"";position:absolute;top:100%;width:10px;height:52px;
+    background:#33220f;border-radius:0 0 3px 3px}
+  .billboard::before{left:16%}.billboard::after{right:16%}
+  .bb-face{background:linear-gradient(#5f4226,#3a2712);border:3px solid #241708;border-radius:6px;
+    padding:9px 10px;text-align:center;box-shadow:0 10px 22px rgba(0,0,0,.55)}
+  .bb-url{display:block;color:#ffd98a;font-weight:800;font-size:13px;letter-spacing:.01em}
+  .bb-sub{display:block;color:#c4a77e;font-size:9px;letter-spacing:.24em;text-transform:uppercase;margin-top:3px}
+  .still{position:absolute;bottom:4%;left:4%;width:min(150px,30vw);opacity:.92;
+    filter:drop-shadow(0 8px 14px rgba(0,0,0,.55))}
+  @media(max-width:520px){.billboard{top:5%;right:3%}.moon{width:40px;height:40px;top:6%;left:8%}}
+  button,input{font:inherit;color:inherit}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px clamp(14px,3vw,28px);border-bottom:1px solid var(--line);background:rgba(22,14,8,.88);
+    position:sticky;top:0;z-index:20}
+  .brand{color:var(--gold2);text-decoration:none;font-weight:800;letter-spacing:.02em}
+  .brand small{color:var(--muted);font-weight:400}
+  main{width:min(560px,100%);margin:0 auto;padding:18px clamp(14px,3vw,24px) 40px;position:relative;z-index:1}
+  .screen.hidden{display:none}
+  h1{font-size:clamp(30px,7vw,44px);margin:6px 0;letter-spacing:-.02em}
+  h2{font-size:clamp(22px,5.5vw,30px);margin:6px 0}
+  h3{margin:14px 0 6px;font-size:15px;color:var(--gold2);letter-spacing:.04em;text-transform:uppercase}
+  h3 small{color:var(--muted);text-transform:none;letter-spacing:0}
+  .lede{color:var(--muted);margin:4px 0 14px;font-size:15px}
+  .btnrow{display:grid;gap:10px;margin:14px 0}
+  button.big{padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);
+    font-weight:700;font-size:16px;cursor:pointer}
+  button.big:active{transform:scale(.98)}
+  button.primary{background:var(--gold);border-color:var(--gold);color:#1a1206}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+  .toolbar button,.shiplist button{padding:9px 12px;border-radius:10px;border:1px solid var(--line);
+    background:var(--panel2);font-size:14px;font-weight:600;cursor:pointer}
+  .toolbar button.active{border-color:var(--gold);color:var(--gold2)}
+  .aigrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+  @media(max-width:420px){.aigrid{grid-template-columns:1fr}}
+  .aicard{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px;cursor:pointer;text-align:left}
+  .aicard.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+  .aicard strong{display:block;font-size:15px}
+  .aicard span{font-size:12.5px;color:var(--muted)}
+  .board{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:420px;margin:0 auto;
+    touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  .cell{aspect-ratio:1;border:0;border-radius:5px;background:var(--sea2);cursor:pointer;padding:0;
+    font-size:11px;font-weight:700;color:var(--ink);min-width:0}
+  .board.enemy .cell:hover{background:var(--sea)}
+  .cell.ship{background:var(--ship);color:#0a1420}
+  .cell.ghost{background:rgba(231,179,75,.55)}
+  .cell.hit{background:var(--hit)}
+  .cell.miss{background:var(--miss);opacity:.75}
+  .cell.sunk{background:#7a1f1a}
+  .cell:disabled{cursor:default}
+  .board-labels{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;max-width:420px;margin:2px auto 0}
+  .board-labels span{text-align:center;font-size:10px;color:var(--muted)}
+  .shiplist{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+  .shiplist .ship{padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--panel);
+    font-size:13px;color:var(--muted)}
+  .shiplist .ship.now{border-color:var(--gold);color:var(--gold2);font-weight:700}
+  .shiplist .ship.done{opacity:.45;text-decoration:line-through}
+  #turn-banner{text-align:center;font-weight:800;font-size:17px;margin:6px 0 2px;min-height:26px;color:var(--gold2)}
+  .blog{margin-top:12px;font-size:13.5px;color:var(--muted);max-height:110px;overflow-y:auto;
+    border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:rgba(0,0,0,.25)}
+  .blog div{margin:2px 0}
+  /* chat */
+  #chatdock{margin-top:18px;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+  #chatdock h3{margin:0;padding:10px 14px;background:var(--panel2);font-size:13px}
+  #chatlog{height:190px;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:7px;font-size:14px}
+  .msg{max-width:88%;padding:7px 11px;border-radius:12px;line-height:1.35}
+  .msg.ai{background:#2a1e10;align-self:flex-start;border-bottom-left-radius:4px}
+  .msg.you{background:#3d3417;align-self:flex-end;border-bottom-right-radius:4px}
+  .msg .who{display:block;font-size:11px;color:var(--gold2);margin-bottom:2px;font-weight:700}
+  .msg.you .who{color:#ffd98a}
+  #chatform{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+  #chatform input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--night);min-width:0}
+  #chatform button{padding:10px 16px;border-radius:10px;border:0;background:var(--gold);color:#1a1206;font-weight:700;cursor:pointer}
+  .fine{font-size:12.5px;color:var(--muted);margin-top:14px}
+  .over{text-align:center;padding:30px 0}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="scene" aria-hidden="true">
+  <div class="stars"></div>
+  <div class="moon"></div>
+  <svg class="ridge far" viewBox="0 0 1440 340" preserveAspectRatio="none"><path d="M0,340 L0,230 L90,180 L170,220 L300,150 L430,215 L560,170 L700,230 L830,160 L960,220 L1100,180 L1240,235 L1360,190 L1440,225 L1440,340 Z"/></svg>
+  <svg class="ridge near" viewBox="0 0 1440 340" preserveAspectRatio="none"><path d="M0,340 L0,270 L110,210 L230,265 L360,200 L500,275 L640,225 L790,285 L930,230 L1080,280 L1220,235 L1360,285 L1440,255 L1440,340 Z"/></svg>
+  <div class="billboard"><div class="bb-face"><span class="bb-url">TennesseeMountainTours.com</span><span class="bb-sub">moonshine &amp; wine tours</span></div></div>
+  <svg class="still" viewBox="0 0 220 175"><ellipse cx="70" cy="163" rx="48" ry="9" fill="#e07b2a" opacity=".45"/><rect x="18" y="100" width="104" height="52" rx="10" fill="#7a4416"/><ellipse cx="70" cy="100" rx="52" ry="14" fill="#8f541d"/><rect x="58" y="78" width="24" height="26" rx="6" fill="#7a4416"/><path d="M82,84 C92,58 112,52 132,56 C152,60 158,74 156,92" fill="none" stroke="#7a4416" stroke-width="15" stroke-linecap="round"/><rect x="146" y="88" width="52" height="64" rx="10" fill="#6e3c14"/><ellipse cx="172" cy="88" rx="26" ry="8" fill="#8f541d"/><path d="M197,120 C214,124 214,140 200,146" fill="none" stroke="#8f541d" stroke-width="8" stroke-linecap="round"/></svg>
+</div>
+<header class="topbar">
+  <a class="brand" href="index.html">🫙 The Honesty Engine <small>· game room</small></a>
+</header>
+<main>
+  <!-- MENU -->
+  <section id="scr-menu" class="screen">
+    <h1>Battleship</h1>
+    <p class="lede">Ten by ten. Five ships. One loudmouth across the table.</p>
+    <div class="btnrow">
+      <button class="big primary" id="btn-vs-ai">▶ Play the regulars</button>
+      <button class="big" id="btn-hotseat">👥 2 players, one phone</button>
+    </div>
+    <h3>Pick your opponent</h3>
+    <div class="aigrid" id="ai-pick"></div>
+    <p class="fine">All AI opponents are scripted fictional characters — pattern-matched table talk, no network calls, no accounts, no tracking. Nobody's performing when they're down a carrier.</p>
+  </section>
+
+  <!-- PLACEMENT -->
+  <section id="scr-place" class="screen hidden">
+    <h2 id="place-title">Place your fleet</h2>
+    <p class="lede" id="place-sub">Tap a square to drop the highlighted ship. Tap <b>Rotate</b> or a tight spot auto-rotates.</p>
+    <div class="toolbar">
+      <button id="btn-rotate">Rotate: →</button>
+      <button id="btn-random">🎲 Random</button>
+      <button id="btn-clear">Clear</button>
+    </div>
+    <div class="shiplist" id="ship-list"></div>
+    <div class="board" id="place-grid" role="grid" aria-label="Your board"></div>
+    <div style="margin-top:14px"><button class="big primary" id="btn-sail" style="width:100%" disabled>Set sail →</button></div>
+  </section>
+
+  <!-- PASS DEVICE (hot-seat) -->
+  <section id="scr-pass" class="screen hidden">
+    <div class="over">
+      <h2 id="pass-title">Hand the phone over</h2>
+      <p class="lede" id="pass-sub">No peeking at the other fleet.</p>
+      <button class="big primary" id="btn-pass-ok">I'm ready — let's go</button>
+    </div>
+  </section>
+
+  <!-- BATTLE -->
+  <section id="scr-battle" class="screen hidden">
+    <div id="turn-banner"></div>
+    <h3>Enemy waters <small id="enemy-name"></small></h3>
+    <div class="board enemy" id="enemy-grid"></div>
+    <h3 style="margin-top:16px">Your fleet</h3>
+    <div class="board" id="own-grid"></div>
+    <div class="blog" id="battle-log" aria-live="polite"></div>
+  </section>
+
+  <!-- GAME OVER -->
+  <section id="scr-over" class="screen hidden">
+    <div class="over">
+      <h1 id="over-title">You sunk 'em all.</h1>
+      <p class="lede" id="over-sub"></p>
+      <div class="btnrow">
+        <button class="big primary" id="btn-rematch">Rematch</button>
+        <button class="big" id="btn-menu2">Back to the engine room</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHAT -->
+  <aside id="chatdock" class="hidden">
+    <h3>💬 Table talk</h3>
+    <div id="chatlog" aria-live="polite"></div>
+    <form id="chatform">
+      <input id="chatin" placeholder="Talk some trash…" autocomplete="off" maxlength="140" />
+      <button type="submit">Send</button>
+    </form>
+  </aside>
+</main>
+<script>
+"use strict";
+/* =====================================================================
+   THE HONESTY ENGINE — BATTLESHIP
+   Classic 10x10 Battleship vs scripted AI regulars, plus hot-seat 2P.
+   ---------------------------------------------------------------------
+   HONEST DISCLOSURE (same as Card Room): every AI opponent below is a
+   scripted fictional character. "Chat" is pattern-matched canned lines —
+   keyword triggers pick a line from a pool. There are no network calls,
+   no language models, no learning, no memory between sessions.
+   ===================================================================== */
+
+const SIZE = 10;
+const SHIPS = [
+  { name: "Carrier",    size: 5 },
+  { name: "Battleship", size: 4 },
+  { name: "Cruiser",    size: 3 },
+  { name: "Submarine",  size: 3 },
+  { name: "Destroyer",  size: 2 },
+];
+
+/* ---------------- AI personalities ---------------- */
+const AIS = [
+  {
+    id: "lucky", name: '"Lucky" Delgado', tag: "Shine-runner & riverboat gambler",
+    blurb: "Cocky, calls everyone friend. Plays by feel.",
+    smart: false,
+    intro: ["Well hey there, friend. Name's Lucky. I never lose games of skill — and I consider everything skill."],
+    hit: ["There's the touch! Read you like a riverboat menu, friend.", "Bullseye, darlin'. The river provides."],
+    miss: ["Ha! Open water. Even the fish are laughing at me.", "Missed. Must be the whiskey hand acting up."],
+    sunkPlayer: ["Down she goes! Send the divers, friend.", "That's a whole ship of yours on the bottom. The house thanks you."],
+    playerHit: ["Ouch. That one had my lucky socks on it.", "A hit! Bold. I respect it — and I will avenge it."],
+    playerSunk: ["My cruiser! ...She was insured. Probably.", "You sunk my ship, friend. Now it's personal. Politely personal."],
+    losing: ["Okay. Okay! The ships are not cooperating today.", "I'm still smiling. That's how you know I'm worried."],
+    winning: ["This is the part where I start feeling bad. Almost.", "Friend, I'm gonna need a bigger trophy shelf."],
+    win: ["Game over, friend! Drinks are on you. ...Kidding. Mostly."],
+    lose: ["Well played. I'll be telling this story as a win by next week."],
+    idle: ["Your move, friend. The ocean isn't getting any smaller.", "Take your time. I've bluffed through longer waits."],
+    reply: {
+      greet: ["Hey there, friend! The water's fine. The ships are less fine."],
+      gg: ["Good game, good game! You're alright, friend."],
+      cheat: ["Cheat? Friend, I don't need to cheat. I have LUCK. ...Mostly."],
+      luck: ["Luck is just skill that hasn't been caught yet."],
+      who: ["Lucky Delgado. Riverboats, card rooms, and now your ocean. Pleasure."],
+      rematch: ["Rematch? Now you're speaking my language, friend."],
+      scared: ["Scared? Me? I'm terrified. That's my tell."],
+      insult: ["Ha! Bold talk from someone whose destroyer is showing."],
+      thanks: ["Anytime, friend. Anytime."],
+      bye: ["So long, friend! The river remembers you."],
+      dflt: ["Say that again after I find your carrier.", "Bold statement. The ocean will judge it.", "Mmm-hm. And yet — my turn."]
+    }
+  },
+  {
+    id: "vera", name: 'Vera "Icebox" Kane', tag: "Ex-revenuer tactician",
+    blurb: "Terse. Analytical. Never tilts. The scary one.",
+    smart: true, /* uses parity search while hunting — the strongest regular */
+    intro: ["I am Vera. I have run the numbers. You have approximately no chance."],
+    hit: ["Hit. Probability updated.", "Contact. Your fleet geometry is... inefficient."],
+    miss: ["Miss. Acceptable variance.", "Water. Recalibrating."],
+    sunkPlayer: ["Ship eliminated. Fewer remain.", "Your battleship is now a reef. A poorly placed reef."],
+    playerHit: ["Hit registered. Annoying, not fatal.", "Noted. I will remember this coordinate emotionally."],
+    playerSunk: ["Vessel lost. My error margin was... optimistic.", "You sank my cruiser. Impressive. It will not happen five more times."],
+    losing: ["Current trajectory: unfavorable. Adjusting.", "Three vessels down. I am now interested."],
+    winning: ["Your fleet is mostly ocean floor. The math is nearly done.", "You are out of ships and nearly out of time."],
+    win: ["Victory. The numbers were never in doubt."],
+    lose: ["Defeat. I will run ten thousand simulations and find the exact moment I underestimated you."],
+    idle: ["Awaiting your move.", "The board is patient. I am more patient."],
+    reply: {
+      greet: ["Hello."],
+      gg: ["Good game. Your pattern recognition improved 12% during play."],
+      cheat: ["Cheating would introduce noise. I prefer signal."],
+      luck: ["Luck is variance. Variance is temporary. I am not."],
+      who: ["Vera Kane. I count things. Currently I am counting your remaining ships."],
+      rematch: ["Rematch accepted. I have already adjusted."],
+      scared: ["Fear is data. Thank you for the data."],
+      insult: ["Your insult has been logged and found statistically insignificant."],
+      thanks: ["Acknowledged."],
+      bye: ["Goodbye."],
+      dflt: ["Irrelevant. Your move.", "Noted.", "Fascinating. Fire when ready."]
+    }
+  },
+  {
+    id: "boomer", name: '"Boomer" Kowalski', tag: "Still-fire hothead",
+    blurb: "Volume up, patience down. All heart, no chill.",
+    smart: false,
+    intro: ["BOOMER'S HERE! Let's sink somethin'! You ready? 'Course you're not!"],
+    hit: ["BOOM! THAT'S HOW WE DO IT!", "HA! Did you feel that?! The fish felt that!"],
+    miss: ["NOTHIN'?! I demand a recount!", "MISS?! ...Okay. Deep breaths. STILL MAD THOUGH."],
+    sunkPlayer: ["DOWN SHE GOES! Somebody get this captain a life jacket!", "THAT'S A WHOLE SHIP! I'm framing this ocean!"],
+    playerHit: ["HEY! That one was NEW!", "You hit my ship?! ...Bold. STUPID, but bold!"],
+    playerSunk: ["MY CRUISER!! Okay!! Now I'm actually trying!", "You sunk it. FINE. Enjoy it — it'll be your last happy moment!"],
+    losing: ["THREE SHIPS?! ...I'M NOT WORRIED. YOU'RE WORRIED.", "Okay, new plan: WIN HARDER."],
+    winning: ["LOOK AT YOUR FLEET! It's basically a coral reef with dreams!", "THREE OF YOURS DOWN! Who's the captain NOW?!"],
+    win: ["VICTORY!! Boomer remains UNDEFEATED! (in this room, just now)"],
+    lose: ["...I want a rematch. And a sandwich. Mostly a rematch."],
+    idle: ["YOUR MOVE! The ocean waits for NO ONE!", "Tick tock, captain! These ships won't sink themselves! ...Unfortunately."],
+    reply: {
+      greet: ["HEY!! Good to see ya! Now let's FIGHT! (the fun kind)"],
+      gg: ["GG!! ...I mean it was good for ME. Mostly."],
+      cheat: ["CHEAT?! I'd never! I win LOUD and HONEST!"],
+      luck: ["Luck? LUCK?! This is SKILL and VOLUME, friend!"],
+      who: ["BOOMER KOWALSKI! Sinker of ships! Yeller of things!"],
+      rematch: ["REMATCH!! YES!! I was hoping you'd say that! I was also hoping for a sandwich!"],
+      scared: ["SCARED?! ...Okay maybe a LITTLE. DON'T TELL ANYONE."],
+      insult: ["OH IT'S LIKE THAT?! ...Good. I fight better mad."],
+      thanks: ["YOU'RE WELCOME!! I'M GREAT!!"],
+      bye: ["BYE!! COME BACK WHEN YOU WANT TO LOSE AGAIN!! (lovingly)"],
+      dflt: ["HUH?! ...Anyway, YOUR MOVE!", "WORDS! I like words! Now FIRE SOMETHING!", "That's the spirit! MISPLACED, but spirited!"]
+    }
+  },
+  {
+    id: "june", name: 'June "The Kid" Park', tag: "Apprentice moonshiner",
+    blurb: "Young, fast, talks the whole game. Dangerously good.",
+    smart: false,
+    intro: ["heyy! i'm june. fair warning: i've sunk like 400 ships this week. most were rubber ducks but still."],
+    hit: ["ooooh HIT! did you see that?? you saw that.", "yesss! that's what i'm talking about!"],
+    miss: ["whiffed it lol. the ocean is big, okay?", "miss! ...i meant to do that. mind games."],
+    sunkPlayer: ["SPLASH! that's a whole ship down! gg!", "your ship is now an aquarium. a free aquarium!"],
+    playerHit: ["hey!! rude! ...nice shot tho.", "ow! okay okay, i see you."],
+    playerSunk: ["my cruiser!! she had a name and everything. (her name was Boat.)", "nooo not Boat!! okay. it's ON now. friendly on, but on."],
+    losing: ["down three ships... this is fine. everything is fine.", "okay i've decided losing builds character. i have SO much character now."],
+    winning: ["three of yours down! i'm basically a naval genius. a GENIUS.", "is it weird that i feel bad? ...nope! not weird at all!"],
+    win: ["GG!! that was fun! rematch? i'll even let you go first. (i won't.)"],
+    lose: ["gg!! you got me! ...i'm telling everyone lag did it."],
+    idle: ["your moooove~", "take your time! i'll just be here. menacingly. (not really.)"],
+    reply: {
+      greet: ["hiii! okay okay, focus. ships. sinking. let's gooo."],
+      gg: ["gg!! that was actually fun. you're good at this!"],
+      cheat: ["cheat?? june doesn't cheat. june just... predicts. aggressively."],
+      luck: ["luck is my middle name! (it's actually marie. don't tell anyone.)"],
+      who: ["i'm june! 19, undefeated at family game night, banned from two arcades. (long story.)"],
+      rematch: ["REMATCH PLS. i already have a whole new strategy. it's called 'win'."],
+      scared: ["scared?? me?? ...okay the carrier thing was a LITTLE scary."],
+      insult: ["rude!! ...i'm writing that down. in my revenge notebook."],
+      thanks: ["aww anytime! (i'm still gonna sink you tho.)"],
+      bye: ["byeee! tell your ships i said hi. then sink them. wait no, that's my job."],
+      dflt: ["lol okay. anyway — your move!", "interestinggg. very interesting. FIRE ALREADY.", "noted! filed! ...under 'things june will avenge'."]
+    }
+  }
+];
+
+/* Keyword → reply-pool routing for player chat. Scripted, no AI. */
+const REPLY_RULES = [
+  [/^(hi|hey|hello|yo|sup|hiya|howdy)\b/, "greet"],
+  [/\bgg\b|good game/, "gg"],
+  [/cheat|hax|hacker/, "cheat"],
+  [/\bluck|lucky/, "luck"],
+  [/who are you|your name|what.*name/, "who"],
+  [/rematch|again|one more/, "rematch"],
+  [/scared|afraid|nervous|worried/, "scared"],
+  [/suck|stink|trash|terrible|awful|bad|loser|dumb|idiot/, "insult"],
+  [/thank|thx|ty\b/, "thanks"],
+  [/\bbye\b|goodbye|see ya|gtg/, "bye"],
+];
+
+/* ---------------- state ---------------- */
+const G = {
+  mode: null,            // 'ai' | 'hotseat'
+  ai: null,             // personality object
+  players: [],          // [{name, board, ships:[{...placed cells}], sunk:0}]
+  current: 0,           // whose turn (hotseat)
+  phase: "menu",        // menu|place|battle|over
+  placing: 0,           // ship index being placed
+  horizontal: true,
+  aiBrain: null,        // {mode:'hunt'|'target', stack:[], hits:[]}
+  aiSunk: 0, playerSunk: 0,
+  announced: {},        // chat milestones already said
+  lastAiLine: -1,
+  busy: false,          // AI "thinking"
+};
+
+const $ = id => document.getElementById(id);
+const screens = ["scr-menu","scr-place","scr-pass","scr-battle","scr-over"];
+function show(id){ screens.forEach(s=>$(s).classList.toggle("hidden", s!==id)); window.scrollTo(0,0); }
+
+/* ---------------- board helpers ---------------- */
+function emptyBoard(){
+  return Array.from({length:SIZE},()=>Array.from({length:SIZE},()=>({ship:-1,hit:false})));
+}
+function cellsFor(r,c,size,horiz){
+  const cells=[];
+  for(let i=0;i<size;i++){ const rr=r+(horiz?0:i), cc=c+(horiz?i:0);
+    if(rr>=SIZE||cc>=SIZE) return null; cells.push([rr,cc]); }
+  return cells;
+}
+function canPlace(board,cells){
+  return cells && cells.every(([r,c])=>board[r][c].ship===-1);
+}
+function placeShip(board,shipIdx,cells){
+  cells.forEach(([r,c])=>{ board[r][c].ship=shipIdx; });
+}
+function removeShip(board,shipIdx){
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++) if(board[r][c].ship===shipIdx) board[r][c].ship=-1;
+}
+function randomPlacement(){
+  const board=emptyBoard(), placed=[];
+  SHIPS.forEach((s,idx)=>{
+    for(let tries=0;tries<500;tries++){
+      const horiz=Math.random()<0.5, r=(Math.random()*SIZE)|0, c=(Math.random()*SIZE)|0;
+      const cells=cellsFor(r,c,s.size,horiz);
+      if(canPlace(board,cells)){ placeShip(board,idx,cells); placed.push({cells,sunk:false}); break; }
+    }
+  });
+  return {board, ships:placed};
+}
+function shipSunk(player, shipIdx){
+  return player.ships[shipIdx].cells.every(([r,c])=>player.board[r][c].hit);
+}
+function allSunk(player){
+  return player.ships.every((_,i)=>shipSunk(player,i));
+}
+
+/* ---------------- chat engine (scripted) ---------------- */
+function addChat(who, text, mine){
+  const log=$("chatlog");
+  const d=document.createElement("div");
+  d.className="msg "+(mine?"you":"ai");
+  const w=document.createElement("span"); w.className="who"; w.textContent=who;
+  d.appendChild(w); d.appendChild(document.createTextNode(text));
+  log.appendChild(d); log.scrollTop=log.scrollHeight;
+}
+function aiSay(pool){
+  if(!G.ai) return;
+  const lines=G.ai[pool]; if(!lines||!lines.length) return;
+  let i=(Math.random()*lines.length)|0;
+  if(lines.length>1){ while(i===G.lastAiLine) i=(Math.random()*lines.length)|0; }
+  G.lastAiLine=i;
+  addChat(G.ai.name, lines[i], false);
+}
+function aiReplyTo(text){
+  const t=text.toLowerCase();
+  let key="dflt";
+  for(const [re,k] of REPLY_RULES){ if(re.test(t)){ key=k; break; } }
+  const pool=G.ai.reply[key]||G.ai.reply.dflt;
+  const line=pool[(Math.random()*pool.length)|0];
+  setTimeout(()=>addChat(G.ai.name,line,false), 450);
+}
+function log(msg){
+  const b=$("battle-log"); const d=document.createElement("div"); d.textContent=msg;
+  b.appendChild(d); b.scrollTop=b.scrollHeight;
+}
+
+/* ---------------- placement UI ---------------- */
+function renderShipList(){
+  const el=$("ship-list"); el.innerHTML="";
+  const p=G.players[G.current];
+  SHIPS.forEach((s,i)=>{
+    const d=document.createElement("div"); d.className="ship";
+    const placed=p.ships.some(sh=>sh.idx===i);
+    if(i===G.placing) d.classList.add("now");
+    if(placed) d.classList.add("done");
+    d.textContent=s.name+" ("+s.size+")";
+    el.appendChild(d);
+  });
+}
+function renderPlaceGrid(){
+  const g=$("place-grid"); g.innerHTML="";
+  const p=G.players[G.current];
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const b=document.createElement("button");
+    b.className="cell"; b.dataset.r=r; b.dataset.c=c;
+    const sh=p.board[r][c].ship;
+    if(sh!==-1){ b.classList.add("ship"); b.textContent="●"; }
+    g.appendChild(b);
+  }
+}
+function updateSail(){
+  const p=G.players[G.current];
+  $("btn-sail").disabled = p.ships.length!==SHIPS.length;
+}
+function startPlacement(playerIdx){
+  G.current=playerIdx; G.placing=0; G.horizontal=true;
+  $("btn-rotate").textContent="Rotate: →";
+  const label = G.mode==="hotseat" ? ("Player "+(playerIdx+1)+", place your fleet") : "Place your fleet";
+  $("place-title").textContent=label;
+  renderShipList(); renderPlaceGrid(); updateSail(); show("scr-place");
+}
+$("place-grid").addEventListener("click", e=>{
+  const cell=e.target.closest(".cell"); if(!cell) return;
+  const r=+cell.dataset.r, c=+cell.dataset.c;
+  const p=G.players[G.current];
+  const existing=p.board[r][c].ship;
+  if(existing!==-1){ // tap a placed ship to lift it back up
+    removeShip(p.board,existing);
+    p.ships=p.ships.filter(sh=>sh.idx!==existing);
+    if(G.placing>=SHIPS.length||p.ships.some(sh=>sh.idx===G.placing)) {
+      const next=SHIPS.findIndex((_,i)=>!p.ships.some(sh=>sh.idx===i));
+      G.placing=next===-1?0:next;
+    }
+    renderShipList(); renderPlaceGrid(); updateSail(); return;
+  }
+  if(G.placing<0||G.placing>=SHIPS.length) return;
+  const s=SHIPS[G.placing];
+  let horiz=G.horizontal;
+  let cells=cellsFor(r,c,s.size,horiz);
+  if(!canPlace(p.board,cells)){ // tight spot? try rotated before giving up
+    horiz=!horiz; cells=cellsFor(r,c,s.size,horiz);
+  }
+  if(!canPlace(p.board,cells)){ log("Can't fit "+s.name+" there."); return; }
+  if(horiz!==G.horizontal){ G.horizontal=horiz; $("btn-rotate").textContent=horiz?"Rotate: →":"Rotate: ↓"; }
+  placeShip(p.board,G.placing,cells);
+  p.ships.push({idx:G.placing,cells});
+  const next=SHIPS.findIndex((_,i)=>!p.ships.some(sh=>sh.idx===i));
+  G.placing = next===-1 ? SHIPS.length : next; // SHIPS.length = "fleet complete"
+  renderShipList(); renderPlaceGrid(); updateSail();
+});
+$("btn-rotate").addEventListener("click",()=>{
+  G.horizontal=!G.horizontal;
+  $("btn-rotate").textContent=G.horizontal?"Rotate: →":"Rotate: ↓";
+});
+$("btn-random").addEventListener("click",()=>{
+  const p=G.players[G.current];
+  const rp=randomPlacement(); p.board=rp.board;
+  p.ships=rp.ships.map((sh,i)=>({idx:i,cells:sh.cells}));
+  G.placing=SHIPS.length;
+  renderShipList(); renderPlaceGrid(); updateSail();
+});
+$("btn-clear").addEventListener("click",()=>{
+  const p=G.players[G.current];
+  p.board=emptyBoard(); p.ships=[]; G.placing=0;
+  renderShipList(); renderPlaceGrid(); updateSail();
+});
+$("btn-sail").addEventListener("click",()=>{
+  if(G.mode==="hotseat" && G.current===0){
+    // P2 places next — hide P1's fleet first
+    passDevice("Player 2, place your fleet","Player 1 — look away. No peeking.",()=>startPlacement(1));
+  } else startBattle();
+});
+
+/* ---------------- battle ---------------- */
+function renderBoards(){
+  const me=G.players[G.current], foe=G.players[1-G.current];
+  const eg=$("enemy-grid"); eg.innerHTML="";
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const b=document.createElement("button");
+    b.className="cell"; b.dataset.r=r; b.dataset.c=c;
+    const cell=foe.board[r][c];
+    if(cell.hit){ b.classList.add(cell.ship!==-1?"hit":"miss"); b.textContent=cell.ship!==-1?"✕":"·"; b.disabled=true; }
+    eg.appendChild(b);
+  }
+  const og=$("own-grid"); og.innerHTML="";
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const b=document.createElement("button");
+    b.className="cell"; b.disabled=true;
+    const cell=me.board[r][c];
+    if(cell.ship!==-1) b.classList.add("ship");
+    if(cell.hit){ b.classList.add(cell.ship!==-1?"hit":"miss"); b.textContent=cell.ship!==-1?"✕":"·"; }
+    og.appendChild(b);
+  }
+  const foeName = G.mode==="ai" ? G.ai.name : "Player "+(2-G.current)+"'s fleet";
+  $("enemy-name").textContent = "— "+foeName;
+  $("turn-banner").textContent = G.mode==="ai" ? "Your shot, captain" : "Player "+(G.current+1)+" — your shot";
+}
+function milestone(key, fn){ if(!G.announced[key]){ G.announced[key]=true; fn(); } }
+
+function fire(shooterIdx, r, c){
+  const foe=G.players[1-shooterIdx];
+  const cell=foe.board[r][c];
+  if(cell.hit) return null;
+  cell.hit=true;
+  const isAI = G.mode==="ai" && shooterIdx===1;
+  const coord=String.fromCharCode(65+r)+(c+1);
+  let sunkName=null;
+  if(cell.ship!==-1 && shipSunk(foe,cell.ship)){
+    sunkName=SHIPS[cell.ship].name;
+    if(isAI) G.aiSunk++; else G.playerSunk++;
+  }
+  const hit=cell.ship!==-1;
+  const who = G.mode==="hotseat" ? "Player "+(shooterIdx+1) : (isAI?G.ai.name:"You");
+  log(who+" fired "+coord+" — "+(hit?"HIT"+(sunkName?" — "+sunkName+" SUNK!":""):"miss"));
+  // chat reactions
+  if(G.mode==="ai"){
+    if(isAI){
+      if(sunkName) aiSay("sunkPlayer");
+      else if(hit) aiSay("hit");
+      else if(Math.random()<0.25) aiSay("miss");
+      if(G.aiSunk===3) milestone("aiWin3",()=>aiSay("winning"));
+    } else {
+      if(sunkName) aiSay("playerSunk");
+      else if(hit && Math.random()<0.5) aiSay("playerHit");
+      if(G.playerSunk===3) milestone("plWin3",()=>aiSay("losing"));
+    }
+  }
+  renderBoards();
+  if(allSunk(foe)){ endGame(shooterIdx); return "over"; }
+  return hit?"hit":"miss";
+}
+
+/* ---- AI brain: hunt, then target orthogonally once it tastes blood ----
+   (targets the human's board: G.players[0]) */
+function aiThink(){
+  const foe=G.players[0];
+  const B=G.aiBrain;
+  const unfired=[];
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++) if(!foe.board[r][c].hit) unfired.push([r,c]);
+  let pick=null;
+  // clean stack of already-fired cells
+  B.stack=B.stack.filter(([r,c])=>!foe.board[r][c].hit);
+  if(B.stack.length){ pick=B.stack.shift(); }
+  else{
+    const pool = (G.ai.smart ? unfired.filter(([r,c])=>(r+c)%2===0) : unfired);
+    pick=pool[(Math.random()*pool.length)|0] || unfired[(Math.random()*unfired.length)|0];
+  }
+  const [r,c]=pick;
+  const res=fire(1,r,c);
+  if(res==="over"){ G.busy=false; return; }
+  if(res==="hit"){
+    const shipIdx=foe.board[r][c].ship;
+    // seed orthogonal neighbors
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dr,dc])=>{
+      const rr=r+dr,cc=c+dc;
+      if(rr>=0&&rr<SIZE&&cc>=0&&cc<SIZE&&!foe.board[rr][cc].hit) B.stack.push([rr,cc]);
+    });
+    // if this sank a ship, forget the hunt around it
+    if(shipIdx!==-1 && shipSunk(foe,shipIdx)) B.stack=[];
+    $("turn-banner").textContent=G.ai.name+" is thinking…";
+    setTimeout(aiThink, 700); // hit = shoot again
+  } else {
+    G.busy=false; // miss → player's turn
+  }
+}
+
+$("enemy-grid").addEventListener("click", e=>{
+  if(G.phase!=="battle"||G.busy) return;
+  const cell=e.target.closest(".cell"); if(!cell||cell.disabled) return;
+  const r=+cell.dataset.r, c=+cell.dataset.c;
+  const shooter=G.mode==="ai"?0:G.current;
+  const res=fire(shooter,r,c);
+  if(res==="over") return;
+  if(res==="hit"){
+    if(G.mode==="ai"){ /* you fire again */ }
+    return; // hotseat: same player keeps shooting
+  }
+  // miss → turn passes
+  if(G.mode==="ai"){
+    G.busy=true; // stays true until the AI's whole turn (incl. hit chains) ends
+    $("turn-banner").textContent=G.ai.name+" is thinking…";
+    setTimeout(aiThink, 800);
+  } else {
+    passDevice("Player "+(2-G.current)+", your shot",
+      "Hand the phone over. No peeking at the other fleet.",
+      ()=>{ G.current=1-G.current; renderBoards(); });
+  }
+});
+
+/* ---------------- hot-seat pass device ---------------- */
+let passCb=null;
+function passDevice(title,sub,cb){
+  $("pass-title").textContent=title; $("pass-sub").textContent=sub; passCb=cb;
+  show("scr-pass");
+}
+$("btn-pass-ok").addEventListener("click",()=>{ if(passCb){ const f=passCb; passCb=null; f(); } });
+
+/* ---------------- game flow ---------------- */
+function newPlayers(){
+  return [{name:"You",board:emptyBoard(),ships:[]},{name:"Foe",board:emptyBoard(),ships:[]}];
+}
+function startBattle(){
+  G.phase="battle";
+  // AI / P2 fleet
+  const foeIdx=1;
+  const rp=randomPlacement();
+  G.players[foeIdx].board=rp.board;
+  G.players[foeIdx].ships=rp.ships.map((sh,i)=>({idx:i,cells:sh.cells}));
+  if(G.mode==="ai"){
+    G.players[1].name=G.ai.name;
+    G.aiBrain={stack:[]};
+    G.aiSunk=0; G.playerSunk=0; G.announced={};
+    $("chatdock").classList.remove("hidden");
+    $("chatlog").innerHTML="";
+    aiSay("intro");
+  } else {
+    G.current=0;
+    $("battle-log").innerHTML="";
+    $("chatdock").classList.remove("hidden");
+    $("chatlog").innerHTML="";
+    addChat("Table","Player 1 fires first. Hit = shoot again. Talk all the trash you want — it's logged.",false);
+    passDevice("Player 1, open fire","Player 2 — look away until it's your turn.",
+      ()=>{ G.current=0; renderBoards(); show("scr-battle"); });
+    return;
+  }
+  $("battle-log").innerHTML="";
+  G.current=0; renderBoards(); show("scr-battle");
+  if(G.mode==="ai" && Math.random()<0.35) setTimeout(()=>aiSay("idle"), 2500);
+}
+function endGame(winnerIdx){
+  G.phase="over";
+  const youWon = G.mode==="ai" ? winnerIdx===0 : true;
+  if(G.mode==="ai"){
+    if(winnerIdx===0){ $("over-title").textContent="You sunk 'em all."; aiSay("lose"); }
+    else { $("over-title").textContent=G.ai.name+" rules the waves."; aiSay("win"); }
+    $("over-sub").textContent = winnerIdx===0
+      ? "The regulars will remember this. They always do."
+      : "Nobody's performing when they're down a carrier. Rematch?";
+  } else {
+    $("over-title").textContent="Player "+(winnerIdx+1)+" rules the waves!";
+    $("over-sub").textContent="Settle it like sailors: rematch.";
+    addChat("Table","Player "+(winnerIdx+1)+" takes it! 🏆",false);
+  }
+  show("scr-over");
+}
+
+/* ---------------- menu wiring ---------------- */
+let selAI=0;
+function renderAiPick(){
+  const el=$("ai-pick"); el.innerHTML="";
+  AIS.forEach((a,i)=>{
+    const b=document.createElement("button");
+    b.className="aicard"+(i===selAI?" sel":"");
+    b.innerHTML="<strong></strong><span></span>";
+    b.querySelector("strong").textContent=a.name;
+    b.querySelector("span").textContent=a.tag+" — "+a.blurb+(a.smart?" (sharp shooter)":"");
+    b.addEventListener("click",()=>{ selAI=i; renderAiPick(); });
+    el.appendChild(b);
+  });
+}
+$("btn-vs-ai").addEventListener("click",()=>{
+  G.mode="ai"; G.ai=AIS[selAI]; G.players=newPlayers(); G.phase="place";
+  startPlacement(0);
+});
+$("btn-hotseat").addEventListener("click",()=>{
+  G.mode="hotseat"; G.ai=null;
+  G.players=[{name:"Player 1",board:emptyBoard(),ships:[]},{name:"Player 2",board:emptyBoard(),ships:[]}];
+  G.phase="place";
+  passDevice("Player 1, place your fleet","Player 2 — look away. No peeking.",()=>startPlacement(0));
+});
+$("btn-rematch").addEventListener("click",()=>{
+  if(G.mode==="ai"){ G.players=newPlayers(); G.phase="place"; startPlacement(0); }
+  else {
+    G.players=[{name:"Player 1",board:emptyBoard(),ships:[]},{name:"Player 2",board:emptyBoard(),ships:[]}];
+    G.phase="place";
+    passDevice("Player 1, place your fleet","Player 2 — look away. No peeking.",()=>startPlacement(0));
+  }
+});
+$("btn-menu2").addEventListener("click",()=>{ G.phase="menu"; $("chatdock").classList.add("hidden"); show("scr-menu"); });
+
+/* player chat input */
+$("chatform").addEventListener("submit",e=>{
+  e.preventDefault();
+  const inp=$("chatin"), text=inp.value.trim();
+  if(!text) return;
+  inp.value="";
+  if(G.mode==="hotseat"){
+    addChat("Player "+(G.current+1), text, G.current===0);
+  } else if(G.ai){
+    addChat("You", text, true);
+    aiReplyTo(text);
+  }
+});
+
+renderAiPick();
+show("scr-menu");
+</script>
+</body>
+</html>

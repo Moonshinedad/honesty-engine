@@ -1,0 +1,1280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<title>Moonshineopoly — The Honesty Engine</title>
+<style>
+  :root{ --ink:#f6eeda; --muted:#c4a77e; --night:#14100b; --panel:#241a10; --panel2:#322413;
+         --gold:#e7a83e; --gold2:#ffcf6b; --line:rgba(255,210,140,.14); }
+  *{box-sizing:border-box}
+  html{min-height:100%;background:var(--night)}
+  body{margin:0;min-height:100vh;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--night)}
+  .scene{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+    background:linear-gradient(#140e28 0%,#33203f 30%,#6e2f33 47%,#c2702f 58%,#2a1608 66%,#14100b 100%)}
+  .stars{position:absolute;left:0;right:0;top:0;height:42%;opacity:.75;background-image:
+    radial-gradient(1.5px 1.5px at 12% 22%,rgba(255,255,255,.9),transparent),
+    radial-gradient(1px 1px at 28% 8%,rgba(255,255,255,.7),transparent),
+    radial-gradient(1.5px 1.5px at 44% 30%,rgba(255,255,255,.8),transparent),
+    radial-gradient(1px 1px at 61% 12%,rgba(255,255,255,.7),transparent),
+    radial-gradient(1.5px 1.5px at 76% 26%,rgba(255,255,255,.85),transparent),
+    radial-gradient(1px 1px at 90% 10%,rgba(255,255,255,.7),transparent)}
+  .moon{position:absolute;top:8%;left:11%;width:56px;height:56px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#ffedbe,#e8a94e 72%);
+    box-shadow:0 0 44px 14px rgba(255,200,110,.22)}
+  .ridge{position:absolute;left:0;width:100%;bottom:0}
+  .ridge.far{height:46%;color:#2c1b3d}
+  .ridge.near{height:30%;color:#100b07}
+  .ridge path{fill:currentColor}
+  .billboard{position:absolute;top:5%;left:50%;width:min(250px,52vw);transform:translateX(-50%) rotate(-1deg);
+    z-index:5;display:block;text-decoration:none;cursor:pointer;transition:transform .15s ease}
+  .billboard:hover{transform:translateX(-50%) rotate(-1deg) scale(1.04)}
+  .billboard::before,.billboard::after{content:"";position:absolute;top:100%;width:10px;height:52px;
+    background:#33220f;border-radius:0 0 3px 3px}
+  .billboard::before{left:16%}.billboard::after{right:16%}
+  .bb-face{background:linear-gradient(#5f4226,#3a2712);border:3px solid #241708;border-radius:6px;
+    padding:9px 10px;text-align:center;box-shadow:0 10px 22px rgba(0,0,0,.55)}
+  .bb-url{display:block;color:#ffd98a;font-weight:800;font-size:13px;letter-spacing:.01em}
+  .bb-sub{display:block;color:#c4a77e;font-size:9px;letter-spacing:.24em;text-transform:uppercase;margin-top:3px}
+  .bb-cta{display:block;color:#9dffb9;font-size:9px;font-weight:800;letter-spacing:.22em;text-transform:uppercase;margin-top:6px}
+  @media(max-width:520px){.moon{width:40px;height:40px;top:6%;left:8%}}
+  button{font:inherit;color:inherit}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px clamp(14px,3vw,28px);border-bottom:1px solid var(--line);background:rgba(22,14,8,.88);
+    position:sticky;top:0;z-index:20}
+  .brand{color:var(--gold2);text-decoration:none;font-weight:800;letter-spacing:.02em}
+  main{width:min(680px,100%);margin:0 auto;padding:18px clamp(10px,3vw,24px) 40px;position:relative;z-index:1}
+  h1{font-size:clamp(30px,8vw,46px);margin:8px 0 2px;letter-spacing:-.02em;text-align:center}
+  .lede{color:var(--muted);text-align:center;margin:0 0 16px;font-size:14.5px}
+  .hidden{display:none!important}
+  .screen{text-align:center}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:14px 0}
+  .big{padding:13px 22px;border-radius:12px;border:1px solid var(--line);background:var(--panel);
+    font-weight:700;font-size:16px;cursor:pointer;min-height:48px}
+  .big.primary{background:var(--gold);border-color:var(--gold);color:#1a1206}
+  .big.sm{font-size:14px;padding:10px 16px;min-height:44px}
+  .aigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:12px 0;text-align:left}
+  .aicard{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel);cursor:pointer;font-size:13px}
+  .aicard.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold)}
+  .aicard b{display:block;font-size:14px}
+  .aicard span{color:var(--muted);font-size:12px}
+  .fine{font-size:12.5px;color:var(--muted);margin-top:14px}
+  /* ---------- board ---------- */
+  #board{position:relative;width:min(96vw,600px);aspect-ratio:1/1;display:grid;
+    grid-template-columns:repeat(11,1fr);grid-template-rows:repeat(11,1fr);gap:2px;
+    background:#171008;border:2px solid var(--line);border-radius:10px;padding:4px;margin:6px auto}
+  .tile{position:relative;background:#2b2114;border-radius:3px;overflow:hidden;
+    font-size:min(2vw,8.5px);line-height:1.2;color:var(--ink);padding:1px 2px;cursor:pointer}
+  .tile .tcolor{height:26%;border-radius:2px;margin-bottom:1px}
+  .tile .tname{display:block;font-weight:700}
+  .tile .tprice{color:var(--gold2);font-size:.95em}
+  .tile .tsub{color:var(--muted);font-size:.9em}
+  .tile.corner{background:#3d2c15;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+  .tile.corner .cemo{font-size:min(4.6vw,20px);line-height:1}
+  .tile.corner .cname{font-weight:800;font-size:min(2.2vw,9px)}
+  .tile .tokens{position:absolute;left:2px;bottom:2px;display:flex;gap:1px;z-index:2}
+  .tok{width:13px;height:13px;border-radius:50%;font-size:9px;display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(0,0,0,.5);transition:transform .18s ease}
+  .tok.tipped{transform:rotate(105deg) translateY(4px)}
+  .tile .jars{position:absolute;right:2px;top:1px;font-size:8px;z-index:2;text-shadow:0 1px 2px #000}
+  .tile.flash{animation:flash .55s ease 2}
+  @keyframes flash{50%{box-shadow:inset 0 0 0 3px var(--gold2);background:#4a3418}}
+  .tile.bmode{box-shadow:inset 0 0 0 2px #9dffb9;cursor:pointer}
+  .bubble{position:absolute;left:50%;bottom:110%;transform:translateX(-50%);background:#fff8e8;color:#241a10;
+    font-size:10px;font-weight:700;padding:4px 8px;border-radius:10px;z-index:6;white-space:nowrap;
+    box-shadow:0 4px 10px rgba(0,0,0,.5)}
+  .cashfly{position:absolute;z-index:30;font-weight:800;color:#9dffb9;font-size:15px;pointer-events:none;
+    text-shadow:0 2px 4px #000;transition:transform .7s ease-in,opacity .7s}
+  /* ---------- board center ---------- */
+  #center{grid-row:2/11;grid-column:2/11;background:rgba(20,14,8,.94);border:1px solid var(--line);
+    border-radius:8px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:7px;
+    overflow-y:auto;text-align:center;position:relative}
+  .tourstrip{display:block;width:100%;background:linear-gradient(#5f4226,#3a2712);border:2px solid #241708;
+    border-radius:6px;color:#ffd98a;text-decoration:none;font-weight:800;font-size:12px;padding:6px 8px}
+  .tourstrip small{display:block;color:#9dffb9;font-size:8px;letter-spacing:.2em;margin-top:2px}
+  #turn-banner{font-weight:800;color:var(--gold2);font-size:14px}
+  #dice{display:flex;gap:8px;min-height:46px;align-items:center;justify-content:center}
+  .die{width:46px;height:46px;border-radius:10px;background:#f6eeda;color:#241a10;font-size:26px;font-weight:800;
+    display:flex;align-items:center;justify-content:center}
+  .die.tumbling{animation:tumble .12s linear infinite}
+  @keyframes tumble{50%{transform:rotate(150deg) scale(.82)}100%{transform:rotate(300deg) scale(1)}}
+  #center-msg{width:100%;font-size:13px;color:var(--ink);min-height:34px}
+  .cardshow{background:#241a10;border:1px solid var(--gold);border-radius:10px;padding:10px;font-size:13px;line-height:1.45}
+  .cardshow b{color:var(--gold2)}
+  #cellmate{position:absolute;inset:8px;background:rgba(20,12,6,.97);border:2px solid var(--gold);border-radius:12px;
+    z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px}
+  .cmface{width:84px;height:84px;border-radius:50%;background:#e8b06a;position:relative;border:3px solid #7a4416}
+  .cmface .eye{position:absolute;top:26px;font-size:20px;font-weight:800;color:#3a1c08}
+  .cmface .eye.l{left:16px}.cmface .eye.r{right:16px}
+  .cmface .mouth{position:absolute;bottom:16px;left:50%;transform:translateX(-50%) rotate(-8deg);
+    width:34px;height:12px;border:3px solid #3a1c08;border-top:0;border-left:0;border-right:0;border-radius:0 0 20px 20px}
+  .cmface .jar{position:absolute;right:-14px;bottom:6px;font-size:26px;transform:rotate(18deg)}
+  #cellmate p{font-size:15px;font-weight:700;color:var(--gold2);margin:0;font-style:italic}
+  #cellmate small{color:var(--muted);font-size:11px}
+  /* ---------- players / chat / modal ---------- */
+  #players{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:12px 0}
+  .pcard{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;
+    font-size:12px;min-width:128px;text-align:left;line-height:1.5}
+  .pcard .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+  .pcard.cur{border-color:var(--gold)}
+  .pcard.out{opacity:.45}
+  .pcard .badge{display:inline-block;background:#7a2a1a;color:#ffd9a8;font-size:10px;font-weight:800;
+    border-radius:6px;padding:1px 6px;margin-left:6px}
+  #chatdock{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);overflow:hidden}
+  #chatdock h3{margin:0;padding:10px 14px;background:var(--panel2);font-size:13px}
+  #chatlog{height:170px;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:7px;font-size:14px}
+  .msg{max-width:88%;padding:7px 11px;border-radius:12px;line-height:1.35}
+  .msg.ai{background:#2a1e10;align-self:flex-start;border-bottom-left-radius:4px}
+  .msg.you{background:#3d3417;align-self:flex-end;border-bottom-right-radius:4px}
+  .msg .who{display:block;font-size:11px;color:var(--gold2);margin-bottom:2px;font-weight:700}
+  .msg.you .who{color:#ffd98a}
+  #chatform{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+  #chatform input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--night);min-width:0;color:var(--ink)}
+  #chatform button{padding:10px 16px;border-radius:10px;border:0;background:var(--gold);color:#1a1206;font-weight:700;cursor:pointer}
+  #modal{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:50;display:flex;align-items:center;
+    justify-content:center;padding:16px}
+  #modal-card{background:var(--panel2);border:1px solid var(--gold);border-radius:14px;max-width:440px;width:100%;
+    max-height:86vh;overflow-y:auto;padding:18px;font-size:14px}
+  #modal-card h3{margin:0 0 10px;color:var(--gold2)}
+  .trow{display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid var(--line);font-size:13px}
+  .trow input[type=checkbox]{width:20px;height:20px}
+  .trow .tg{margin-left:auto;color:var(--muted);font-size:12px}
+  #modal-card input[type=number]{width:90px;padding:8px;border-radius:8px;border:1px solid var(--line);
+    background:var(--night);color:var(--ink)}
+  #modal-card select{padding:9px;border-radius:8px;background:var(--night);color:var(--ink);border:1px solid var(--line)}
+  footer{color:var(--muted);font-size:13px;line-height:1.7;text-align:center;margin-top:22px}
+  footer a{color:var(--gold2)}
+  .over{text-align:center;padding:30px 0}
+</style>
+</head>
+<body>
+<div class="scene" aria-hidden="true">
+  <div class="stars"></div>
+  <div class="moon"></div>
+  <svg class="ridge far" viewBox="0 0 1440 340" preserveAspectRatio="none"><path d="M0,340 L0,230 L90,180 L170,220 L300,150 L430,215 L560,170 L700,230 L830,160 L960,220 L1100,180 L1240,235 L1360,190 L1440,225 L1440,340 Z"/></svg>
+  <svg class="ridge near" viewBox="0 0 1440 340" preserveAspectRatio="none"><path d="M0,340 L0,270 L110,210 L230,265 L360,200 L500,275 L640,225 L790,285 L930,230 L1080,280 L1220,235 L1360,285 L1440,255 L1440,340 Z"/></svg>
+  <a class="billboard" href="https://tennesseemountaintours.com" target="_blank" rel="noopener" aria-label="Book a Tennessee Mountain Tours moonshine and wine tour"><div class="bb-face"><span class="bb-url">TennesseeMountainTours.com</span><span class="bb-sub">moonshine &amp; wine tours</span><span class="bb-cta">tap to book your tour</span></div></a>
+</div>
+<header class="topbar">
+  <a class="brand" href="index.html">🫙 The Honesty Engine <small>· game room</small></a>
+</header>
+<main>
+  <!-- MENU -->
+  <section id="scr-menu" class="screen">
+    <h1>Moonshineopoly</h1>
+    <p class="lede">Property tradin' on the Smoky Mountain tastin' trail. Buy the shine, dodge the revenuer, don't fall asleep at the campfire.</p>
+    <div class="btnrow">
+      <button class="big primary" id="btn-vs-ai">▶ Play the regulars</button>
+      <button class="big" id="btn-hotseat">👥 Hot-seat: 2–4, one phone</button>
+    </div>
+    <div id="ai-setup">
+      <h3>Pick your opponents <small style="color:var(--muted)">(tap to toggle)</small></h3>
+      <div class="aigrid" id="ai-pick"></div>
+    </div>
+    <div id="hs-setup" class="hidden">
+      <h3>How many players?</h3>
+      <div class="btnrow" id="hs-count">
+        <button class="big sm" data-n="2">2</button>
+        <button class="big sm" data-n="3">3</button>
+        <button class="big sm" data-n="4">4</button>
+      </div>
+    </div>
+    <div class="btnrow"><button class="big primary" id="btn-start">Start game →</button></div>
+    <p class="fine">Roll, buy stills &amp; cideries, build jars (houses) and copper stills (hotels), trade like a riverboat gambler.
+      Land on the Campfire and try not to embarrass yourself. All AI opponents are scripted fictional characters —
+      pattern-matched table talk, no network calls, no accounts, no tracking. Nobody's performing when they're down to their last jar.</p>
+  </section>
+
+  <!-- PASS DEVICE (hot-seat) -->
+  <section id="scr-pass" class="screen hidden">
+    <div class="over">
+      <h2 id="pass-title">Hand the phone over</h2>
+      <p class="lede" id="pass-sub">No peeking at the other player's scheming.</p>
+      <button class="big primary" id="btn-pass-ok">I'm ready — let's go</button>
+    </div>
+  </section>
+
+  <!-- GAME -->
+  <section id="scr-game" class="screen hidden">
+    <div id="board" aria-label="Moonshineopoly board"></div>
+    <div id="players"></div>
+  </section>
+
+  <!-- GAME OVER -->
+  <section id="scr-over" class="screen hidden">
+    <div class="over">
+      <h1 id="over-title"></h1>
+      <p class="lede" id="over-sub"></p>
+      <div class="btnrow">
+        <button class="big primary" id="btn-rematch">Rematch</button>
+        <button class="big" id="btn-menu2">Back to the engine room</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHAT -->
+  <aside id="chatdock" class="hidden">
+    <h3>💬 Table talk</h3>
+    <div id="chatlog" aria-live="polite"></div>
+    <form id="chatform">
+      <input id="chatin" placeholder="Talk some trash…" autocomplete="off" maxlength="140" />
+      <button type="submit">Send</button>
+    </form>
+  </aside>
+
+  <footer>
+    Brought to you by Hal. <a href="https://muse.ai" target="_blank" rel="noopener">Download now</a>.<br>
+    Built with <a href="https://muse.ai" target="_blank" rel="noopener">Muse</a> — my AI sidekick.<br>
+    <a href="https://muse.ai" target="_blank" rel="noopener">Get the Muse app</a> and build something of your own.
+  </footer>
+</main>
+
+<!-- trade / confirm modal -->
+<div id="modal" class="hidden"><div id="modal-card"></div></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   THE HONESTY ENGINE — MOONSHINEOPOLY
+   Property trading on the Smoky Mountain tasting trail vs scripted AI
+   regulars, plus hot-seat pass-and-play. Original board, original cards,
+   original characters. Not affiliated with or endorsed by Hasbro.
+   ---------------------------------------------------------------------
+   HONEST DISCLOSURE: every AI opponent below is a scripted fictional
+   character. "Chat" is pattern-matched canned lines — keyword triggers
+   pick a line from a pool. Dice are Math.random. There are no network
+   calls, no language models, no learning, no memory between sessions.
+   ===================================================================== */
+
+/* ---------------- board data ---------------- */
+const GROUPS = {
+  A:{c:"#c98a3d", n:"Shine Row"}, B:{c:"#c2506b", n:"Berry Run"},
+  C:{c:"#8a5fbf", n:"Wine Hollow"}, D:{c:"#e07b2a", n:"Whiskey Ridge"},
+  E:{c:"#c04545", n:"Brandy Bend"}, F:{c:"#5da24e", n:"Cider Creek"},
+  G:{c:"#3fa08f", n:"Harvest Hollow"}, H:{c:"#4a6fd4", n:"Reserve Row"}
+};
+/* kinds: go, prop, tale, tax, shuttle, trouble, jail, util, free, goto
+   rents: [base, full-set, 1jar, 2jar, 3jar, 4jar, still] */
+const SQUARES = [
+  {n:"Shine On", s:"GO", k:"go", sub:"Collect $200"},
+  {n:"Apple Pie Moonshine", s:"Apple Pie", k:"prop", g:"A", p:60, r:[2,4,10,30,90,160,250], j:50},
+  {n:"Tall Tales", s:"Tall Tales", k:"tale", sub:"Draw a card"},
+  {n:"Blackberry Moonshine", s:"Blackberry", k:"prop", g:"A", p:60, r:[4,8,20,60,180,320,450], j:50},
+  {n:"Revenuer Tax", s:"Revenuer Tax", k:"tax", amt:200, sub:"Pay $200"},
+  {n:"Copper Line Trolley", s:"Copper Line", k:"shuttle", p:200, sub:"Tasting shuttle"},
+  {n:"Peach Moonshine", s:"Peach", k:"prop", g:"B", p:100, r:[6,12,30,90,270,400,550], j:50},
+  {n:"Still Trouble", s:"Still Trouble", k:"trouble", sub:"Draw a card"},
+  {n:"Cherry Moonshine", s:"Cherry", k:"prop", g:"B", p:100, r:[6,12,30,90,270,400,550], j:50},
+  {n:"Strawberry Moonshine", s:"Strawberry", k:"prop", g:"B", p:120, r:[8,16,40,100,300,450,600], j:50},
+  {n:"Sleepin' It Off", s:"Sleepin' It Off", k:"jail", sub:"Just visitin'"},
+  {n:"Blueberry Wine", s:"Blueberry Wine", k:"prop", g:"C", p:140, r:[10,20,50,150,450,625,750], j:100},
+  {n:"Copper Still Works", s:"Still Works", k:"util", p:150, sub:"Utility"},
+  {n:"Muscadine Wine", s:"Muscadine", k:"prop", g:"C", p:140, r:[10,20,50,150,450,625,750], j:100},
+  {n:"Catawba Wine", s:"Catawba", k:"prop", g:"C", p:160, r:[12,24,60,180,500,700,900], j:100},
+  {n:"Smoky Mountain Trolley", s:"Smoky Trolley", k:"shuttle", p:200, sub:"Tasting shuttle"},
+  {n:"Corn Whiskey Hollow", s:"Corn Whiskey", k:"prop", g:"D", p:180, r:[14,28,70,200,550,750,950], j:100},
+  {n:"Tall Tales", s:"Tall Tales", k:"tale", sub:"Draw a card"},
+  {n:"Rye Ridge Whiskey", s:"Rye Ridge", k:"prop", g:"D", p:180, r:[14,28,70,200,550,750,950], j:100},
+  {n:"Honey Bourbon Bend", s:"Honey Bourbon", k:"prop", g:"D", p:200, r:[16,32,80,220,600,800,1000], j:100},
+  {n:"The Campfire", s:"Campfire", k:"free", sub:"Free Parking"},
+  {n:"Blackberry Brandy", s:"Blackberry Brandy", k:"prop", g:"E", p:220, r:[18,36,90,250,700,875,1050], j:150},
+  {n:"Still Trouble", s:"Still Trouble", k:"trouble", sub:"Draw a card"},
+  {n:"Apple Brandy Run", s:"Apple Brandy", k:"prop", g:"E", p:220, r:[18,36,90,250,700,875,1050], j:150},
+  {n:"Hard Cider Mill", s:"Hard Cider", k:"prop", g:"E", p:240, r:[20,40,100,300,750,925,1100], j:150},
+  {n:"Cidery Loop Line", s:"Cidery Loop", k:"shuttle", p:200, sub:"Tasting shuttle"},
+  {n:"Pear Cider Press", s:"Pear Cider", k:"prop", g:"F", p:260, r:[22,44,110,330,800,975,1150], j:150},
+  {n:"Blueberry Cider Orchard", s:"Blueberry Cider", k:"prop", g:"F", p:260, r:[22,44,110,330,800,975,1150], j:150},
+  {n:"Mountain Spring Water Co.", s:"Spring Water", k:"util", p:150, sub:"Utility"},
+  {n:"Cranberry Cider Co.", s:"Cranberry Cider", k:"prop", g:"F", p:280, r:[24,48,120,360,850,1025,1200], j:150},
+  {n:"Busted!", s:"Busted!", k:"goto", sub:"Go to Sleepin' It Off"},
+  {n:"Pumpkin Shine Patch", s:"Pumpkin Shine", k:"prop", g:"G", p:300, r:[26,52,130,390,900,1100,1275], j:200},
+  {n:"Maple Moonshine Mill", s:"Maple Shine", k:"prop", g:"G", p:300, r:[26,52,130,390,900,1100,1275], j:200},
+  {n:"Tall Tales", s:"Tall Tales", k:"tale", sub:"Draw a card"},
+  {n:"Sweet Tea Vodka Still", s:"Sweet Tea Vodka", k:"prop", g:"G", p:320, r:[28,56,150,450,1000,1200,1400], j:200},
+  {n:"Winery Wagon Express", s:"Winery Wagon", k:"shuttle", p:200, sub:"Tasting shuttle"},
+  {n:"Still Trouble", s:"Still Trouble", k:"trouble", sub:"Draw a card"},
+  {n:"Ginseng Moonshine Reserve", s:"Ginseng Reserve", k:"prop", g:"H", p:350, r:[35,70,175,500,1100,1300,1500], j:200},
+  {n:"Festival Entry Fee", s:"Festival Fee", k:"tax", amt:100, sub:"Pay $100"},
+  {n:"Smoky Mountain Grand Reserve", s:"Grand Reserve", k:"prop", g:"H", p:400, r:[50,100,200,600,1400,1700,2000], j:200}
+];
+SQUARES.forEach(sq => { sq.owner = null; });
+
+const TALES = [
+  {t:"Cousin Buford's still blew its lid. Collect $50 insurance money.", e:"collect", n:50},
+  {t:"You won the pie-eatin' contest at the county fair. Collect $45.", e:"collect", n:45},
+  {t:"Found a jar buried behind the barn. Collect $100.", e:"collect", n:100},
+  {t:"Your apple butter sold out at the market. Collect $25.", e:"collect", n:25},
+  {t:"Doctor's orders: rest up. Collect $50 get-well shine.", e:"collect", n:50},
+  {t:"Pay the fiddler: $40 for the barn dance band.", e:"pay", n:40},
+  {t:"Your hound treed a raccoon in the smokehouse. Pay $30 damages.", e:"pay", n:30},
+  {t:"GET OUT OF SLEEPIN' IT OFF FREE. Keep this card.", e:"jailfree"},
+  {t:"Advance to Shine On. Collect $200.", e:"go"},
+  {t:"Back taxes on the still. Pay $50.", e:"pay", n:50},
+  {t:"Tourists loved your pour. Collect $35 in tips.", e:"collect", n:35},
+  {t:"Repair the copper coils: pay $25 per jar, $100 per still you own.", e:"perjar", n:25, m:100}
+];
+const TROUBLES = [
+  {t:"The revenuer's onto you! Go directly to Sleepin' It Off. Do not pass GO.", e:"jail"},
+  {t:"Advance to Shine On. Collect $200.", e:"go"},
+  {t:"Your mule won the race! Advance to the nearest tasting shuttle.", e:"nearshuttle"},
+  {t:"Take the tasting trail: advance to Ginseng Moonshine Reserve.", e:"adv", n:37},
+  {t:"Shine bond dividend. Collect $50.", e:"collect", n:50},
+  {t:"Speedin' down the Parkway! Pay $15.", e:"pay", n:15},
+  {t:"Your batch won gold at the fair. Collect $150.", e:"collect", n:150},
+  {t:"GET OUT OF SLEEPIN' IT OFF FREE. Keep this card.", e:"jailfree"},
+  {t:"Your wagon wheel came off. Go back 3 spaces.", e:"back3"},
+  {t:"Advance to the nearest still works.", e:"nearutil"},
+  {t:"New jars needed: pay $40 per jar, $115 per still you own.", e:"perjar", n:40, m:115},
+  {t:"You inherited grandpappy's recipe book. Collect $100.", e:"collect", n:100}
+];
+
+/* ---------------- the regulars (same voices as Battleship) ---------------- */
+const AIS = [
+  { id:"lucky", name:'"Lucky" Delgado', tag:"Shine-runner & riverboat gambler", blurb:"Cocky, calls everyone friend. Buys on feel.",
+    reserve:100, tradeFactor:1.05, jailPays:false, buildEager:0.5,
+    intro:["Well hey there, friend! Lucky Delgado. I play property like I play poker — with a smile and somebody else's money."],
+    roll:["Shake 'em, friend!", "Dice are just tiny fortune cookies."],
+    doubles:["Doubles! The river provides!", "Twice the luck, half the shame!"],
+    buy:["Sold! Friend, you just watched a master at work.", "Mine! ...I mean, ours. The table's."],
+    pass:["Eh, I'll let that one simmer. Like a good mash."],
+    rentVictim:["Rent?! Friend, I thought we were FAMILY.", "Taking my money? Bold. Rude. Bold."],
+    rentOwner:["Pay up, friend! The house always wins, and tonight I'm the house.", "That's rent, sugar. Don't spend it all in one... oh wait, you can't."],
+    passGo:["Two hundred! Daddy's buying new suspenders."],
+    jailed:["Sleepin' It Off?! Friend, I was just RESTING my eyes!", "Jail? Me? There must be some mistake. A hilarious, expensive mistake."],
+    jailOut:["Free! The system works!", "Back on the board, friend. Try to keep up."],
+    bankruptMe:["Broke?! ...Well. The river giveth, and the river is a jerk.", "I'm out, friends. Somebody write my memoir: 'Lucky: A Cautionary Tale.'"],
+    bankruptFoe:["Ooh, somebody's out! Pour one out. ...A cheap one.", "Bankrupt! Friend, thems the breaks. The breaks are brutal."],
+    win:["WINNER! Drinks are on... well, they're on somebody. Not me. I'm rich now."],
+    lose:["You got me, friend. I'll be telling this story as a win by next week."],
+    tradeYes:["Deal! Pleasure doing business, friend."],
+    tradeNo:["No deal, friend. My gut says no, and my gut is never wrong. Except now. Maybe."],
+    tradePropose:["Psst. Friend. I've got a proposition that'll make us both rich. Mostly me."],
+    idle:["Your move, friend. The properties aren't getting any cheaper.", "Take your time. I've bluffed through longer waits."],
+    drunk:["Oh great, I think I'm drunk. ...Worth it.", "The campfire got me, friend. The campfire ALWAYS gets me."],
+    card:["A card! I love surprises. Usually.", "Tall tale time!"],
+    reply:{ greet:["Hey there, friend! The trail's fine. Your wallet's less fine."],
+      gg:["Good game, good game! You're alright, friend."], cheat:["Cheat? Friend, I don't need to cheat. I have LUCK. ...Mostly."],
+      luck:["Luck is just skill that hasn't been caught yet."], who:["Lucky Delgado. Riverboats, card rooms, and now your Main Street. Pleasure."],
+      rematch:["Rematch? Now you're speaking my language, friend."], scared:["Scared? Me? I'm terrified. That's my tell."],
+      insult:["Ha! Bold talk from someone about to pay me rent."], thanks:["Anytime, friend. Anytime."],
+      bye:["So long, friend! The trail remembers you."], dflt:["Say that again after I own this whole mountainside.", "Bold statement. The dice will judge it.", "Mmm-hm. And yet — my turn."] } },
+  { id:"vera", name:'Vera "Icebox" Kane', tag:"Ex-revenuer tactician", blurb:"Terse. Analytical. Never tilts. The scary one.",
+    reserve:200, tradeFactor:1.2, jailPays:true, buildEager:1,
+    intro:["I am Vera. I have run ten thousand simulations of this game. You lose in 9,412 of them."],
+    roll:["Rolling.", "Probability in motion."],
+    doubles:["Doubles. Statistically overdue.", "Again. Efficiency."],
+    buy:["Acquired. A sound investment.", "Purchased. The numbers approved."],
+    pass:["Declined. Suboptimal asset.", "Pass. I don't buy noise."],
+    rentVictim:["Rent paid. Logged as a rounding error.", "A setback. Temporary. Probably."],
+    rentOwner:["Rent. Your poor positioning funds my portfolio.", "Pay. The math is not negotiable."],
+    passGo:["$200. Compound interest of motion."],
+    jailed:["Incarcerated. An unscheduled audit of my strategy.", "Sleepin' It Off. I will use the time to recalculate."],
+    jailOut:["Released. The simulations resume.", "Free. You should be concerned."],
+    bankruptMe:["Bankrupt. My models failed to account for... this. Recalibrating.", "Eliminated. I will find the exact decision that doomed me."],
+    bankruptFoe:["One fewer variable. The board simplifies.", "Bankrupt. As projected."],
+    win:["Victory. The outcome was never in doubt. Only the timeline was."],
+    lose:["Defeat. I will run ten thousand more simulations and find my error."],
+    tradeYes:["Accepted. Mutually beneficial. Mostly mine."],
+    tradeNo:["Rejected. Your offer insults arithmetic.", "No. The numbers laughed."],
+    tradePropose:["A proposal. It favors me slightly. Accept anyway."],
+    idle:["Awaiting your move.", "The board is patient. I am more patient."],
+    drunk:["Oh great, I think I'm drunk. Blood alcohol: yes.", "The campfire has compromised my calculations."],
+    card:["Drawing a card. Randomness, quantified.", "A tale. I prefer data, but fine."],
+    reply:{ greet:["Hello."], gg:["Good game. Your pattern recognition improved 12% during play."],
+      cheat:["Cheating would introduce noise. I prefer signal."], luck:["Luck is variance. Variance is temporary. I am not."],
+      who:["Vera Kane. I count things. Currently I am counting your remaining dollars."], rematch:["Rematch accepted. I have already adjusted."],
+      scared:["Fear is data. Thank you for the data."], insult:["Your insult has been logged and found statistically insignificant."],
+      thanks:["Acknowledged."], bye:["Goodbye."], dflt:["Irrelevant. Your move.", "Noted.", "Fascinating. Roll when ready."] } },
+  { id:"boomer", name:'"Boomer" Kowalski', tag:"Still-fire hothead", blurb:"Volume up, patience down. Buys everything.",
+    reserve:20, tradeFactor:0.95, jailPays:false, buildEager:0.7,
+    intro:["BOOMER'S HERE! Let's buy EVERYTHING! You ready?! 'Course you're not!"],
+    roll:["ROLL 'EM!", "DICE! FLY, MY BEAUTIES!"],
+    doubles:["DOUBLES!! AGAIN!!", "TWO OF THE SAME! THAT'S CALLED WINNING TWICE!"],
+    buy:["MINE!! I OWN THAT NOW!!", "BOUGHT IT! DIDN'T EVEN READ IT!"],
+    pass:["PASS?! ...Okay. FINE. I'll buy the NEXT one!"],
+    rentVictim:["RENT?! ROBBERY! ...Fine. Here's your money. JERK. (lovingly)", "YOU'RE CHARGING ME?! ...Okay okay. Take it. TAKE IT ALL."],
+    rentOwner:["PAY UP!! THE BOOMER COLLECTS!!", "RENT'S DUE, BABY! Ka-CHING!"],
+    passGo:["TWO HUNDRED BUCKS! WOOO!"],
+    jailed:["JAIL?! I DID NOTHING! ...Okay I did the thing. BUT STILL!", "SLEEPIN' IT OFF?! I'M WIDE AWAKE AND FURIOUS!"],
+    jailOut:["I'M FREE!! SOMEBODY HIDE THE PROPERTIES!", "OUT! OUT! LET'S GOOO!"],
+    bankruptMe:["BROKE?! ...I want a rematch. And a sandwich. Mostly a rematch.", "OUT?! FINE! I'll be back! LOUDER!"],
+    bankruptFoe:["SOMEONE'S OUT! ...That was almost me. PHEW.", "BANKRUPT! Hate to see it. LOVE to cause it."],
+    win:["VICTORY!! BOOMER REMAINS UNDEFEATED! (in this room, just now)"],
+    lose:["...I demand a recount! And a rematch! AND A SANDWICH!"],
+    tradeYes:["DEAL!! SHAKE ON IT! HIGH FIVE!"],
+    tradeNo:["NO DEAL?! ...Your loss! MY GAIN! Somehow!"],
+    tradePropose:["TRADE WITH ME! IT'LL BE GREAT! PROBABLY!"],
+    idle:["YOUR MOVE! THE PROPERTIES WAIT FOR NO ONE!", "TICK TOCK! BUY SOMETHING!"],
+    drunk:["OH GREAT, I THINK I'M DRUNK! ...BEST CAMPFIRE EVER!", "THE CAMPFIRE GOT ME! NO REGRETS!"],
+    card:["A CARD! I LOVE CARDS! WHAT'S IT SAY?!"],
+    reply:{ greet:["HEY!! Good to see ya! Now let's BUY STUFF!"], gg:["GG!! ...I mean it was good for ME. Mostly."],
+      cheat:["CHEAT?! I'd never! I win LOUD and HONEST!"], luck:["Luck? LUCK?! This is SKILL and VOLUME, friend!"],
+      who:["BOOMER KOWALSKI! Buyer of things! Yeller of things!"], rematch:["REMATCH!! YES!! I was hoping you'd say that! I was also hoping for a sandwich!"],
+      scared:["SCARED?! ...Okay maybe a LITTLE. DON'T TELL ANYONE."], insult:["OH IT'S LIKE THAT?! ...Good. I haggle better mad."],
+      thanks:["YOU'RE WELCOME!! I'M GREAT!!"], bye:["BYE!! COME BACK WHEN YOU WANT TO LOSE AGAIN!! (lovingly)"],
+      dflt:["HUH?! ...Anyway, YOUR MOVE!", "WORDS! I like words! Now BUY SOMETHING!", "That's the spirit! MISPLACED, but spirited!"] } },
+  { id:"june", name:'June "The Kid" Park', tag:"Apprentice moonshiner", blurb:"Young, fast, talks the whole game. Learning quick.",
+    reserve:80, tradeFactor:1.0, jailPays:false, buildEager:0.8,
+    intro:["heyy i'm june! i've played like 400 games of this. most were against my cat but still."],
+    roll:["dice dice dice~", "c'mon lucky seven! (there's no seven. i know.)"],
+    doubles:["doubles!! i'm basically a dice wizard.", "again!! the dice like me."],
+    buy:["bought it! my property empire grows. (it's two properties.)", "mine! i'm gonna name it... Shiney McShineface."],
+    pass:["eh, i'll pass. saving up for something big. probably snacks."],
+    rentVictim:["rent?? ugh, fine. take my money. (i'm keeping the receipt.)", "you're charging ME? rude! ...here."],
+    rentOwner:["rent please! ...that felt powerful. i like it.", "pay up! the kid collects!"],
+    passGo:["$200! i'm rich! (i'm not rich.)"],
+    jailed:["jail?! i was just SLEEPIN'! ...that's literally what it's called. oh no.", "busted! okay this is actually kind of funny."],
+    jailOut:["i'm free! the system works! (i paid the system.)", "out! time to make better choices. (i won't.)"],
+    bankruptMe:["broke?! ...i'm telling everyone lag did it.", "i'm out! gg everyone! ...can i still watch?"],
+    bankruptFoe:["ooh someone's out! ...note to self: don't do that.", "bankrupt! brutal. absolutely brutal."],
+    win:["I WON!! tell my cat! TELL EVERYONE!"],
+    lose:["gg! you got me! ...rematch? i've got a whole new strategy. it's called 'win'."],
+    tradeYes:["deal! handshake emoji!"],
+    tradeNo:["no deal? ...i'm writing that down. in my revenge notebook."],
+    tradePropose:["psst. wanna trade? i've got a REALLY good offer. (it's okay.)"],
+    idle:["your moooove~", "take your time! i'll just be here. menacingly. (not really.)"],
+    drunk:["oh great, i think i'm drunk. ...the campfire betrayed me.", "i'm seeing double! wait, that's just the dice."],
+    card:["ooo a card! i love these!", "tall tale time! story time!"],
+    reply:{ greet:["hiii! okay okay, focus. properties. buying. let's gooo."], gg:["gg!! that was actually fun. you're good at this!"],
+      cheat:["cheat?? june doesn't cheat. june just... predicts. aggressively."], luck:["luck is my middle name! (it's actually marie. don't tell anyone.)"],
+      who:["i'm june! 19, undefeated at family game night, banned from two arcades. (long story.)"],
+      rematch:["REMATCH PLS. i already have a whole new strategy. it's called 'win'."], scared:["scared?? me?? ...okay the rent thing was a LITTLE scary."],
+      insult:["rude!! ...i'm writing that down. in my revenge notebook."], thanks:["aww anytime! (i'm still gonna out-buy you tho.)"],
+      bye:["byeee! tell your properties i said hi. then sell them. wait no, that's my job."],
+      dflt:["lol okay. anyway — your move!", "interestinggg. very interesting. ROLL ALREADY.", "noted! filed! ...under 'things june will avenge'."] } }
+];
+
+const REPLY_RULES = [
+  [/^(hi|hey|hello|yo|sup|hiya|howdy)\b/, "greet"],
+  [/\bgg\b|good game/, "gg"],
+  [/cheat|hax|hacker/, "cheat"],
+  [/\bluck|lucky/, "luck"],
+  [/who are you|your name|what.*name/, "who"],
+  [/rematch|again|one more/, "rematch"],
+  [/scared|afraid|nervous|worried/, "scared"],
+  [/suck|stink|trash|terrible|awful|bad|loser|dumb|idiot/, "insult"],
+  [/thank|thx|ty\b/, "thanks"],
+  [/\bbye\b|goodbye|see ya|gtg/, "bye"]
+];
+
+/* ---------------- state & helpers ---------------- */
+const G = {
+  players:[], turn:0, turnCount:0, over:false, doubles:0, mode:"ai",
+  tales:[], troubles:[], test:false, buildMode:false, lastAiLine:{}, lastDice:0
+};
+const tq = []; /* test-mode deferred queue: later() drains iteratively, no recursion */
+const $ = id => document.getElementById(id);
+const screens = ["scr-menu","scr-pass","scr-game","scr-over"];
+function show(id){ screens.forEach(s=>$(s).classList.toggle("hidden", s!==id)); window.scrollTo(0,0); }
+function later(fn, ms){ if(G.test){ tq.push(fn); } else setTimeout(fn, ms||0); }
+function rnd(n){ return (Math.random()*n)|0; }
+function pick(a){ return a[rnd(a.length)]; }
+function fmt(n){ return "$"+n; }
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=rnd(i+1); const t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+function cur(){ return G.players[G.turn]; }
+function solvent(){ return G.players.filter(p=>!p.bankrupt); }
+function isHuman(p){ return !p.ai; }
+
+function mkPlayer(name, ai, color, emoji){
+  return { name:name, ai:ai||null, color:color, emoji:emoji,
+    cash:1500, pos:0, props:[], jars:{}, still:{},
+    jail:0, jailFree:false, bankrupt:false, lastTradeTurn:-99 };
+}
+function ownerOf(i){ return SQUARES[i].owner; }
+function groupSize(g){ let n=0; for(const sq of SQUARES) if(sq.g===g) n++; return n; }
+function ownsGroup(p,g){ for(let i=0;i<40;i++){ const sq=SQUARES[i]; if(sq.g===g && sq.owner!==p) return false; } return true; }
+function countKind(p,kind){ let n=0; for(const i of p.props) if(SQUARES[i].k===kind) n++; return n; }
+function jarCount(p,i){ return p.jars[i]||0; }
+
+/* rent: [base, full-set, 1jar, 2jar, 3jar, 4jar, still] */
+function rentFor(i, dice){
+  const sq = SQUARES[i], o = sq.owner;
+  if(sq.k==="shuttle"){ const n=countKind(o,"shuttle"); return 25*Math.pow(2,n-1); }
+  if(sq.k==="util"){ const n=countKind(o,"util"); return dice*(n===2?10:4); }
+  const p = o;
+  if(p.still[i]) return sq.r[6];
+  const j = jarCount(p,i);
+  if(j>0) return sq.r[1+j];
+  return ownsGroup(p, sq.g) ? sq.r[1] : sq.r[0];
+}
+function tileRC(i){
+  if(i<=10) return {r:11, c:11-i};
+  if(i<=20) return {r:11-(i-10), c:1};
+  if(i<=30) return {r:1, c:1+(i-20)};
+  return {r:1+(i-30), c:11};
+}
+
+/* ---------------- chat ---------------- */
+function addChat(who, text, mine){
+  const log=$("chatlog"); if(!log) return;
+  const d=document.createElement("div");
+  d.className="msg "+(mine?"you":"ai");
+  const w=document.createElement("span"); w.className="who"; w.textContent=who;
+  const t=document.createElement("span"); t.textContent=text;
+  d.appendChild(w); d.appendChild(t); log.appendChild(d);
+  log.scrollTop=log.scrollHeight;
+}
+function aiSay(p, pool){
+  if(!p.ai || G.test) return;
+  const lines=p.ai[pool]; if(!lines||!lines.length) return;
+  let i=rnd(lines.length);
+  const key=p.ai.id+":"+pool;
+  if(lines.length>1){ let guard=0; while(i===G.lastAiLine[key] && guard++<8) i=rnd(lines.length); }
+  G.lastAiLine[key]=i;
+  addChat(p.ai.name, lines[i], false);
+}
+function aiReplyTo(text){
+  const t=text.toLowerCase();
+  let key="dflt";
+  for(const re_k of REPLY_RULES){ if(re_k[0].test(t)){ key=re_k[1]; break; } }
+  const foes=solvent().filter(p=>p.ai);
+  if(!foes.length) return;
+  const p=pick(foes), line=pick(p.ai.reply[key]||p.ai.reply.dflt);
+  later(()=>addChat(p.ai.name, line, false), 450);
+}
+
+/* ---------------- board render ---------------- */
+const CORNER = {0:{e:"🏁",n:"GO"},10:{e:"😴",n:"Sleepin' It Off"},20:{e:"🔥",n:"Campfire"},30:{e:"🚨",n:"Busted!"}};
+function buildBoard(){
+  const b=$("board"); b.innerHTML="";
+  for(let i=0;i<40;i++){
+    const sq=SQUARES[i], rc=tileRC(i);
+    const d=document.createElement("div");
+    d.className="tile"+(CORNER[i]?" corner":"");
+    d.style.gridRow=rc.r; d.style.gridColumn=rc.c;
+    d.dataset.i=i;
+    if(CORNER[i]){
+      d.innerHTML='<span class="cemo">'+CORNER[i].e+'</span><span class="cname">'+CORNER[i].n+'</span>'+
+        (sq.sub?'<span class="tsub">'+sq.sub+'</span>':"")+'<div class="tokens"></div>';
+    } else {
+      let colorBar="";
+      if(sq.g) colorBar='<div class="tcolor" style="background:'+GROUPS[sq.g].c+'"></div>';
+      else if(sq.k==="shuttle") colorBar='<div class="tcolor" style="background:#8a8a8a"></div>';
+      else if(sq.k==="util") colorBar='<div class="tcolor" style="background:#4aa3c7"></div>';
+      else if(sq.k==="tale"||sq.k==="trouble") colorBar='<div class="tcolor" style="background:#e7a83e"></div>';
+      d.innerHTML=colorBar+'<span class="tname">'+sq.s+'</span>'+
+        (sq.p?'<span class="tprice">'+fmt(sq.p)+'</span>':(sq.sub?'<span class="tsub">'+sq.sub+'</span>':""))+
+        '<div class="jars"></div><div class="tokens"></div>';
+    }
+    b.appendChild(d);
+  }
+  const c=document.createElement("div");
+  c.id="center";
+  c.innerHTML=
+    '<a class="tourstrip" href="https://tennesseemountaintours.com" target="_blank" rel="noopener">TennesseeMountainTours.com<small>TAP TO BOOK YOUR MOONSHINE &amp; WINE TOUR</small></a>'+
+    '<div id="turn-banner"></div>'+
+    '<div id="dice"></div>'+
+    '<div class="btnrow" id="action-row">'+
+      '<button class="big sm primary hidden" id="btn-roll">🎲 Roll</button>'+
+      '<button class="big sm hidden" id="btn-build">🫙 Build</button>'+
+      '<button class="big sm hidden" id="btn-trade">🤝 Trade</button>'+
+      '<button class="big sm primary hidden" id="btn-end">End turn →</button>'+
+    '</div>'+
+    '<div id="center-msg"></div>'+
+    '<div id="cellmate" class="hidden"><div class="cmface"><span class="eye l">✕</span><span class="eye r">✕</span><span class="mouth"></span><span class="jar">🫙</span></div><p>"I\'m not as think as you drunk I am."</p><small>— your new cellmate</small></div>';
+  b.appendChild(c);
+  b.onclick = onTileTap;
+  $("btn-roll").addEventListener("click", ()=>{ hideActions(); doRoll(cur(), false); });
+  $("btn-end").addEventListener("click", ()=>{ hideActions(); endTurnSoon(cur()); });
+  $("btn-build").addEventListener("click", ()=>toggleBuildMode());
+  $("btn-trade").addEventListener("click", ()=>openTrade(cur()));
+}
+function tileEl(i){ const b=$("board"); return b.querySelector('[data-i="'+i+'"]'); }
+function renderTiles(){
+  for(let i=0;i<40;i++){
+    const t=tileEl(i); if(!t) continue;
+    const sq=SQUARES[i], o=sq.owner;
+    t.style.boxShadow = o ? ("inset 0 0 0 2px "+o.color) : "";
+    const j=t.querySelector(".jars");
+    if(j){
+      let s="";
+      if(o){ const n=jarCount(o,i); if(o.still[i]) s="🏭"; else if(n>0) s="🫙×"+n; }
+      j.textContent=s;
+    }
+    t.classList.toggle("bmode", !!(G.buildMode && o===cur() && canBuild(cur(),i)));
+  }
+}
+function renderTokens(){
+  document.querySelectorAll("#board .tokens").forEach(el=>{ el.innerHTML=""; });
+  for(const p of G.players){
+    if(p.bankrupt) continue;
+    const t=tileEl(p.pos); if(!t) continue;
+    const box=t.querySelector(".tokens"); if(!box) continue;
+    const s=document.createElement("span");
+    s.className="tok"; s.style.background=p.color; s.textContent=p.emoji;
+    s.dataset.p=G.players.indexOf(p);
+    box.appendChild(s);
+  }
+}
+function renderPlayers(){
+  const w=$("players"); w.innerHTML="";
+  G.players.forEach((p,idx)=>{
+    const d=document.createElement("div");
+    d.className="pcard"+(idx===G.turn&&!G.over?" cur":"")+(p.bankrupt?" out":"");
+    let jars=0, stills=0;
+    for(const i of p.props){ jars+=jarCount(p,i); if(p.still[i]) stills++; }
+    d.innerHTML='<span class="dot" style="background:'+p.color+'"></span><b>'+p.name+'</b>'+
+      (p.jail>0?'<span class="badge">😴 JAIL</span>':"")+(p.bankrupt?'<span class="badge">OUT</span>':"")+
+      "<br>"+fmt(p.cash)+" · "+p.props.length+" props · 🫙"+jars+(stills?" · 🏭"+stills:"")+
+      (p.jailFree?" · 🃏":"");
+    w.appendChild(d);
+  });
+}
+function renderAll(){ renderTiles(); renderTokens(); renderPlayers(); }
+function setBanner(t){ const b=$("turn-banner"); if(b) b.textContent=t; }
+function setMsg(html){ const m=$("center-msg"); if(m) m.innerHTML=html||""; }
+function showActions(which){
+  const map={"btn-roll":0,"btn-build":0,"btn-trade":0,"btn-end":0};
+  (which||[]).forEach(id=>{map[id]=1;});
+  for(const id in map) $(id).classList.toggle("hidden", !map[id]);
+}
+function hideActions(){ showActions([]); }
+
+/* ---------------- animations ---------------- */
+function rollDiceAnim(cb){
+  if(G.test){ cb(1+rnd(6), 1+rnd(6)); return; }
+  const dz=$("dice"); dz.innerHTML='<div class="die tumbling">?</div><div class="die tumbling">?</div>';
+  const faces=dz.querySelectorAll(".die");
+  const iv=setInterval(()=>{ faces[0].textContent=1+rnd(6); faces[1].textContent=1+rnd(6); },90);
+  setTimeout(()=>{
+    clearInterval(iv);
+    const d1=1+rnd(6), d2=1+rnd(6);
+    faces[0].classList.remove("tumbling"); faces[1].classList.remove("tumbling");
+    faces[0].textContent=d1; faces[1].textContent=d2;
+    setTimeout(()=>cb(d1,d2), 350);
+  }, 700);
+}
+function walkToken(p, steps, cb, collectGo){
+  if(G.test){
+    for(let s=0;s<steps;s++){ p.pos=(p.pos+1)%40; if(p.pos===0 && collectGo!==false){ p.cash+=200; } }
+    renderTokens(); later(cb,0); return;
+  }
+  let s=0;
+  (function step(){
+    if(s>=steps){ renderTokens(); cb(); return; }
+    p.pos=(p.pos+1)%40; s++;
+    if(p.pos===0 && collectGo!==false){
+      p.cash+=200; addLog(p.name+" passes Shine On (+$200)."); aiSay(p,"passGo"); renderPlayers();
+    }
+    renderTokens();
+    later(step, 130);
+  })();
+}
+function walkBack(p, steps, cb){
+  if(G.test){ p.pos=(p.pos-steps+40*4)%40; renderTokens(); later(cb,0); return; }
+  let s=0;
+  (function step(){
+    if(s>=steps){ renderTokens(); cb(); return; }
+    p.pos=(p.pos+39)%40; s++;
+    renderTokens(); later(step, 130);
+  })();
+}
+function tileCenter(i){
+  const t=tileEl(i), b=$("board");
+  const r=t.getBoundingClientRect(), br=b.getBoundingClientRect();
+  return {x:r.left-br.left+r.width/2, y:r.top-br.top+r.height/2};
+}
+function cashFly(fromI, toI, n){
+  if(G.test) return;
+  const b=$("board"), a=tileCenter(fromI), z=tileCenter(toI);
+  for(let k=0;k<Math.min(4,n);k++){
+    const s=document.createElement("span");
+    s.className="cashfly"; s.textContent="💵";
+    s.style.left=(a.x-8+(k*6-9))+"px"; s.style.top=(a.y-10)+"px";
+    b.appendChild(s);
+    const dx=z.x-a.x, dy=z.y-a.y;
+    requestAnimationFrame(()=>{ s.style.transform="translate("+dx+"px,"+dy+"px)"; s.style.opacity="0"; });
+    setTimeout(()=>s.remove(), 800+k*60);
+  }
+}
+function flashSquare(i){
+  if(G.test) return;
+  const t=tileEl(i); if(!t) return;
+  t.classList.remove("flash"); void t.offsetWidth; t.classList.add("flash");
+}
+function tipToken(p){
+  const t=tileEl(p.pos); if(!t) return;
+  const tok=t.querySelector('.tok[data-p="'+G.players.indexOf(p)+'"]');
+  const line = p.ai ? pick(p.ai.drunk) : "Oh great, I think I'm drunk.";
+  const b=document.createElement("div");
+  b.className="bubble"; b.textContent=line;
+  t.appendChild(b);
+  if(tok) tok.classList.add("tipped");
+  later(()=>{ if(tok) tok.classList.remove("tipped"); b.remove(); }, 1900);
+}
+function showCellmate(){
+  if(G.test) return;
+  const c=$("cellmate"); c.classList.remove("hidden");
+  later(()=>c.classList.add("hidden"), 2800);
+}
+function addLog(msg){
+  if(G.test) return;
+  setMsg('<div style="color:var(--muted);font-size:12px">'+msg+'</div>');
+}
+
+/* ---------------- money & bankruptcy ---------------- */
+function mostJarsProp(p){
+  let best=-1, bn=0;
+  for(const i of p.props){ const n=jarCount(p,i)+(p.still[i]?5:0); if(n>bn){ bn=n; best=i; } }
+  return best;
+}
+function sellJar(p,i){
+  const sq=SQUARES[i], half=Math.floor(sq.j/2);
+  if(p.still[i]){ p.still[i]=false; p.jars[i]=4; }
+  else if((p.jars[i]||0)>0){ p.jars[i]--; }
+  else return false;
+  p.cash+=half; return true;
+}
+function payDebt(p, amt, creditor, done){
+  let guard=0;
+  while(p.cash<amt && guard++<60){ const j=mostJarsProp(p); if(j<0) break; sellJar(p,j); }
+  renderAll();
+  if(p.cash<amt){ bankrupt(p, creditor); later(done,0); return; }
+  p.cash-=amt;
+  if(creditor && !creditor.bankrupt) creditor.cash+=amt;
+  renderAll();
+  later(done,0);
+}
+function bankrupt(p, creditor){
+  if(p.bankrupt) return;
+  p.bankrupt=true;
+  for(const i of p.props){
+    p.jars[i]=0; p.still[i]=false;
+    const sq=SQUARES[i];
+    if(creditor && !creditor.bankrupt){ sq.owner=creditor; creditor.props.push(i); }
+    else sq.owner=null;
+  }
+  p.props=[];
+  addLog("💀 "+p.name+" went bankrupt!");
+  if(p.ai) aiSay(p,"bankruptMe");
+  for(const q of solvent()){ if(q!==p && q.ai) aiSay(q,"bankruptFoe"); }
+  renderAll();
+  checkWin();
+}
+function richest(){ let b=null; for(const p of solvent()){ if(!b||p.cash>b.cash) b=p; } return b; }
+function checkWin(){
+  if(G.over) return;
+  const s=solvent();
+  if(s.length===1){ gameOver(s[0]); return; }
+  const humans=G.players.filter(p=>!p.ai);
+  if(humans.length && humans.every(h=>h.bankrupt)) gameOver(richest());
+}
+function gameOver(winner){
+  if(G.over) return;
+  G.over=true; hideActions(); setMsg(""); G.buildMode=false;
+  const hw = winner && !winner.ai;
+  $("over-title").textContent = hw ? "🏆 You own the mountain!" : ("🏆 "+(winner?winner.name:"Nobody")+" owns the mountain");
+  let worth=0; if(winner){ worth=winner.cash; for(const i of winner.props){ const sq=SQUARES[i]; worth+=sq.p+jarCount(winner,i)*sq.j*0.5+(winner.still[i]?sq.j*2:0); } }
+  $("over-sub").textContent = (winner?winner.name:"Nobody")+" takes the tasting trail after "+G.turnCount+" turns · net worth "+fmt(Math.round(worth))+".";
+  if(winner && winner.ai) aiSay(winner,"win");
+  for(const p of G.players){ if(p.ai && p!==winner) aiSay(p,"lose"); }
+  show("scr-over");
+}
+
+/* ---------------- buying ---------------- */
+function buyProperty(p,i){
+  const sq=SQUARES[i];
+  p.cash-=sq.p; sq.owner=p; p.props.push(i);
+  flashSquare(i); renderAll();
+  if(p.ai) aiSay(p,"buy");
+  addLog(p.name+" bought "+sq.n+" ("+fmt(sq.p)+").");
+}
+function aiBuyOrPass(p,i,done){
+  const sq=SQUARES[i];
+  let want = p.cash-sq.p >= p.ai.reserve;
+  if(p.ai.id==="vera" && sq.p>280 && !completesSet(p,i) && p.cash<700) want=false;
+  if(p.ai.id==="boomer" && p.cash>sq.p) want=true;
+  if(want && p.cash>=sq.p) buyProperty(p,i);
+  else aiSay(p,"pass");
+  later(done,0);
+}
+function buyPrompt(p,i,done){
+  const sq=SQUARES[i];
+  setMsg('<div class="cardshow"><b>'+sq.n+'</b><br>Price '+fmt(sq.p)+
+    (sq.k==="prop"?' · Base rent '+fmt(sq.r[0]):(sq.k==="shuttle"?' · Rent $25–$200':(sq.k==="util"?' · Rent = dice × 4 or × 10':"")))+
+    '<div class="btnrow"><button class="big sm primary" id="m-buy">Buy</button>'+
+    '<button class="big sm" id="m-pass">Pass</button></div></div>');
+  $("m-buy").onclick=()=>{ buyProperty(p,i); setMsg(""); later(done,0); };
+  $("m-pass").onclick=()=>{ addLog(p.name+" passes on "+sq.s+"."); setMsg(""); later(done,0); };
+}
+
+/* ---------------- turn flow ---------------- */
+function takeTurn(){
+  if(G.over) return;
+  const p=cur();
+  if(p.bankrupt){ nextTurn(); return; }
+  renderAll();
+  setBanner(p.name+(p.ai?" · "+p.ai.tag:"")+" — "+fmt(p.cash));
+  if(p.jail>0){ jailTurn(p); return; }
+  if(p.ai){
+    later(()=>{ if(!G.over && Math.random()<0.3) aiSay(p,"idle"); }, 400);
+    later(()=>aiTurn(p), 800);
+  } else {
+    showActions(["btn-roll","btn-build","btn-trade"]);
+    setMsg("Your move — roll the dice. (Build & trade anytime.)");
+  }
+}
+function aiTurn(p){
+  if(G.over||p.bankrupt) return;
+  doRoll(p,false);
+}
+function doRoll(p, fromJail){
+  aiSay(p,"roll");
+  rollDiceAnim((d1,d2)=>{
+    if(G.over) return;
+    const tot=d1+d2; G.lastDice=tot;
+    if(!fromJail){
+      if(d1===d2){
+        G.doubles++;
+        if(p.ai) aiSay(p,"doubles"); else addChat("You","Doubles! Roll again.",true);
+        if(G.doubles>=3){
+          addLog(p.name+" rolled doubles 3 times!");
+          goToJail(p,"three doubles in a row");
+          endTurnSoon(p); return;
+        }
+      } else G.doubles=0;
+    }
+    walkToken(p, tot, ()=>resolveSquare(p, tot, ()=>afterMove(p)));
+  });
+}
+function resolveSquare(p, dice, done){
+  if(G.over) return;
+  const i=p.pos, sq=SQUARES[i];
+  renderAll();
+  switch(sq.k){
+    case "go": addLog(p.name+" lands on Shine On."); later(done,0); break;
+    case "prop": case "shuttle": case "util": {
+      const o=sq.owner;
+      if(!o){ if(p.ai) aiBuyOrPass(p,i,done); else buyPrompt(p,i,done); }
+      else if(o!==p && !o.bankrupt){
+        const amt=rentFor(i,dice);
+        if(p.ai) aiSay(p,"rentVictim");
+        cashFly(p.pos, o.pos, amt);
+        addLog(p.name+" pays "+fmt(amt)+" rent to "+o.name+" ("+sq.s+").");
+        payDebt(p, amt, o, ()=>{
+          if(!p.bankrupt && o.ai) aiSay(o,"rentOwner");
+          renderAll(); later(done,0);
+        });
+      }
+      else { addLog(p.name+" visits their own "+sq.s+"."); later(done,0); }
+      break;
+    }
+    case "tax":
+      addLog("🧾 "+p.name+" pays "+sq.n+" ("+fmt(sq.amt)+").");
+      payDebt(p, sq.amt, null, ()=>{ renderAll(); later(done,0); });
+      break;
+    case "tale": drawCard(p,"tale",done); break;
+    case "trouble": drawCard(p,"trouble",done); break;
+    case "free": freeParkingBit(p); later(done,0); break;
+    case "goto": goToJail(p,"busted"); endTurnSoon(p); break;
+    case "jail": addLog(p.name+" is just visitin' Sleepin' It Off."); later(done,0); break;
+    default: later(done,0);
+  }
+}
+function afterMove(p){
+  if(G.over) return;
+  renderAll();
+  if(p.bankrupt){ endTurnSoon(p); return; }
+  if(G.doubles>0){
+    if(p.ai){ aiBuild(p); later(()=>{ if(!G.over) doRoll(p,false); }, 700); }
+    else { setMsg("Doubles! Roll again."); showActions(["btn-roll","btn-build","btn-trade"]); }
+    return;
+  }
+  if(p.ai){ aiBuild(p); maybeTradeAI(p, ()=>endTurnSoon(p)); }
+  else showActions(["btn-build","btn-trade","btn-end"]);
+}
+function endTurnSoon(p){
+  if(G.over) return;
+  hideActions(); setMsg(""); G.buildMode=false;
+  const bl=$("btn-build"); if(bl) bl.textContent="🫙 Build";
+  if(G.mode==="hotseat" && isHuman(p)){
+    const nxt=G.players[(G.turn+1)%G.players.length];
+    passDevice(nxt.name+" — you're up", "No peeking at the books.", ()=>nextTurn());
+  } else later(nextTurn, 500);
+}
+function nextTurn(){
+  if(G.over) return;
+  G.turn=(G.turn+1)%G.players.length;
+  G.turnCount++; G.doubles=0;
+  if(G.turnCount>2500){ gameOver(richest()); return; }
+  takeTurn();
+}
+
+/* ---------------- jail ---------------- */
+function goToJail(p, why){
+  p.pos=10; p.jail=1; G.doubles=0;
+  renderAll();
+  addLog("🚨 "+p.name+" goes to Sleepin' It Off ("+why+").");
+  aiSay(p,"jailed");
+  showCellmate();
+}
+function jailTurn(p){
+  renderAll();
+  if(p.ai){
+    later(()=>{
+      if(G.over||p.bankrupt) return;
+      if(p.jailFree){ p.jailFree=false; p.jail=0; aiSay(p,"jailOut"); addLog(p.name+" uses a Get Out of Sleepin' It Off Free card."); renderAll(); doRoll(p,true); }
+      else if(p.ai.jailPays && p.cash>250){ payDebt(p,50,null,()=>{ if(!p.bankrupt){ p.jail=0; aiSay(p,"jailOut"); renderAll(); doRoll(p,true); } else endTurnSoon(p); }); }
+      else doJailRoll(p);
+    }, 700);
+    return;
+  }
+  let html='<div class="cardshow"><b>😴 Sleepin\' It Off</b><br>Morning '+(p.jail)+' of 3.<div class="btnrow">'+
+    '<button class="big sm primary" id="j-roll">🎲 Roll for doubles</button>'+
+    '<button class="big sm" id="j-pay">Pay $50 bail</button>';
+  if(p.jailFree) html+='<button class="big sm" id="j-card">🃏 Use free card</button>';
+  html+='</div></div>';
+  setMsg(html);
+  $("j-roll").onclick=()=>{ setMsg(""); doJailRoll(p); };
+  $("j-pay").onclick=()=>{ setMsg(""); payDebt(p,50,null,()=>{ if(!p.bankrupt){ p.jail=0; renderAll(); doRoll(p,true); } else endTurnSoon(p); }); };
+  const jc=$("j-card");
+  if(jc) jc.onclick=()=>{ p.jailFree=false; p.jail=0; setMsg(""); renderAll(); doRoll(p,true); };
+}
+function doJailRoll(p){
+  aiSay(p,"roll");
+  rollDiceAnim((d1,d2)=>{
+    if(G.over) return;
+    const tot=d1+d2;
+    if(d1===d2){
+      p.jail=0; aiSay(p,"jailOut"); addLog(p.name+" rolled doubles — outta the drunk tank!");
+      walkToken(p,tot,()=>resolveSquare(p,tot,()=>afterMove(p)));
+    } else {
+      p.jail++;
+      if(p.jail>3){
+        addLog(p.name+" serves 3 mornings — pays $50 bail.");
+        payDebt(p,50,null,()=>{
+          if(!p.bankrupt){ p.jail=0; renderAll(); walkToken(p,tot,()=>resolveSquare(p,tot,()=>afterMove(p))); }
+          else endTurnSoon(p);
+        });
+      } else {
+        addLog(p.name+" stays sleepin' it off.");
+        if(p.ai) aiSay(p,"jailed");
+        endTurnSoon(p);
+      }
+    }
+  });
+}
+
+/* ---------------- Free Parking bit (Jacky's direction) ---------------- */
+function freeParkingBit(p){
+  const line = p.ai ? pick(p.ai.drunk) : "Oh great, I think I'm drunk.";
+  addChat(p.name, line, isHuman(p));
+  tipToken(p);
+  addLog("🔥 "+p.name+" hits the Campfire...");
+}
+
+/* ---------------- cards ---------------- */
+function drawCard(p, kind, done){
+  const deck = kind==="tale"?G.tales:G.troubles;
+  const card=deck.shift(); deck.push(card);
+  aiSay(p,"card");
+  setMsg('<div class="cardshow"><b>'+(kind==="tale"?"📖 Tall Tale":"🌪️ Still Trouble")+'</b><br>'+card.t+'</div>');
+  later(()=>applyCard(p, card, done), 1400);
+}
+function applyCard(p, card, done){
+  const finish=()=>{ setMsg(""); later(done,0); };
+  switch(card.e){
+    case "collect": p.cash+=card.n; addLog(p.name+" collects "+fmt(card.n)+"."); renderPlayers(); finish(); break;
+    case "pay": addLog(p.name+" pays "+fmt(card.n)+"."); payDebt(p,card.n,null,()=>finish()); break;
+    case "perjar": {
+      let amt=0;
+      for(const i of p.props){ amt+=jarCount(p,i)*card.n; if(p.still[i]) amt+=card.m; }
+      addLog(p.name+" pays "+fmt(amt)+" in repairs."); payDebt(p,amt,null,()=>finish()); break;
+    }
+    case "jailfree": p.jailFree=true; addLog(p.name+" keeps a Get Out of Sleepin' It Off Free card."); renderPlayers(); finish(); break;
+    case "go": p.pos=0; p.cash+=200; renderAll(); addLog(p.name+" advances to Shine On (+$200)."); finish(); break;
+    case "jail": setMsg(""); goToJail(p,"a Still Trouble card"); endTurnSoon(p); break;
+    case "adv": {
+      setMsg("");
+      const steps=(card.n-p.pos+40)%40;
+      walkToken(p,steps,()=>resolveSquare(p,G.lastDice,()=>afterMove(p)));
+      break;
+    }
+    case "back3": setMsg(""); walkBack(p,3,()=>resolveSquare(p,G.lastDice,()=>afterMove(p))); break;
+    case "nearshuttle": case "nearutil": {
+      setMsg("");
+      const want=card.e==="nearshuttle"?"shuttle":"util";
+      let s=1; for(;s<=40;s++){ if(SQUARES[(p.pos+s)%40].k===want) break; }
+      walkToken(p,s,()=>resolveSquare(p,G.lastDice,()=>afterMove(p)));
+      break;
+    }
+    default: finish();
+  }
+}
+
+/* ---------------- building jars & stills ---------------- */
+function canBuild(p,i){
+  const sq=SQUARES[i];
+  if(!sq.g || sq.owner!==p || p.bankrupt) return false;
+  if(!ownsGroup(p,sq.g)) return false;
+  if(p.still[i]) return false;
+  if(p.cash<sq.j) return false;
+  const mine=jarCount(p,i);
+  if(mine>=4) return true;
+  let mn=99;
+  for(let k=0;k<40;k++){ if(SQUARES[k].g===sq.g){ const c=p.still[k]?5:jarCount(p,k); if(c<mn) mn=c; } }
+  return mine<=mn;
+}
+function buildOn(p,i){
+  const sq=SQUARES[i];
+  if(!canBuild(p,i)) return false;
+  p.cash-=sq.j;
+  if(jarCount(p,i)>=4){ p.still[i]=true; p.jars[i]=0; addLog("🏭 "+p.name+" raises a COPPER STILL on "+sq.s+"!"); }
+  else { p.jars[i]=jarCount(p,i)+1; addLog("🫙 "+p.name+" adds a jar on "+sq.s+" ("+p.jars[i]+")."); }
+  flashSquare(i); renderAll();
+  return true;
+}
+function aiBuild(p){
+  if(p.bankrupt) return;
+  let guard=0;
+  while(guard++<24){
+    let best=-1;
+    for(const i of p.props){
+      if(!canBuild(p,i)) continue;
+      if(p.cash-SQUARES[i].j < p.ai.reserve) continue;
+      if(Math.random()>p.ai.buildEager) continue;
+      if(best<0 || SQUARES[i].r[6]>SQUARES[best].r[6]) best=i;
+    }
+    if(best<0) break;
+    buildOn(p,best);
+  }
+}
+function toggleBuildMode(){
+  const p=cur();
+  if(p.ai||G.over) return;
+  G.buildMode=!G.buildMode;
+  renderTiles();
+  setMsg(G.buildMode?"🫙 Build mode: tap a highlighted property of yours to add a jar. Tap Build again to stop.":"");
+  $("btn-build").textContent=G.buildMode?"✓ Done":"🫙 Build";
+}
+function onTileTap(e){
+  const t=e.target.closest ? e.target.closest(".tile") : null;
+  if(!t || !t.dataset) return;
+  const i=+t.dataset.i, p=cur();
+  if(G.buildMode && isHuman(p) && !G.over){
+    if(canBuild(p,i)){ buildOn(p,i); renderTiles(); }
+    else addLog("Can't build there — need the full set, even jars, and cash.");
+    return;
+  }
+  const sq=SQUARES[i];
+  let h="<b>"+sq.n+"</b>";
+  if(sq.g) h+=" · "+GROUPS[sq.g].n;
+  if(sq.p) h+="<br>Price "+fmt(sq.p);
+  if(sq.owner) h+="<br>Owner: "+sq.owner.name+" · Rent now "+fmt(rentFor(i, G.lastDice||7));
+  else if(sq.k==="prop"||sq.k==="shuttle"||sq.k==="util") h+="<br><i>Unowned</i>";
+  if(sq.sub) h+="<br>"+sq.sub;
+  setMsg(h);
+}
+
+/* ---------------- trading ---------------- */
+function tradeValueFor(pl, props){
+  let v=0;
+  for(const i of props){
+    const sq=SQUARES[i];
+    let pv=sq.p + jarCount(pl,i)*sq.j*0.5 + (pl.still[i]?sq.j*2:0);
+    if(completesSet(pl,i)) pv*=1.5;
+    v+=pv;
+  }
+  return v;
+}
+function completesSet(pl,i){
+  const g=SQUARES[i].g; if(!g) return false;
+  let n=0;
+  for(let k=0;k<40;k++){ if(SQUARES[k].g===g && SQUARES[k].owner===pl) n++; }
+  return n===groupSize(g)-1;
+}
+function breaksSet(pl,i){
+  const g=SQUARES[i].g; if(!g) return false;
+  return ownsGroup(pl,g);
+}
+function aiTradeEval(aiP, o){
+  if((!o.giveProps.length && !o.giveCash) || (!o.wantProps.length && !o.wantCash)) return false;
+  for(const i of o.wantProps){ if(SQUARES[i].owner!==aiP) return false; }
+  for(const i of o.giveProps){ if(SQUARES[i].owner && SQUARES[i].owner!==aiP && SQUARES[i].owner!==o._from) return false; }
+  let getV=tradeValueFor(aiP,o.giveProps)+o.giveCash;
+  let giveV=tradeValueFor(aiP,o.wantProps)+o.wantCash;
+  for(const i of o.wantProps){ if(breaksSet(aiP,i)) giveV*=1.6; }
+  if(aiP.cash-o.wantCash < 60) return false;
+  return getV >= giveV*aiP.ai.tradeFactor;
+}
+function doTrade(a, b, o){
+  for(const i of o.giveProps){
+    const sq=SQUARES[i];
+    a.cash+=Math.floor(jarCount(a,i)*sq.j/2)+(a.still[i]?sq.j*2:0);
+    a.jars[i]=0; a.still[i]=false;
+    sq.owner=b; a.props=a.props.filter(x=>x!==i); b.props.push(i);
+  }
+  for(const i of o.wantProps){
+    const sq=SQUARES[i];
+    b.cash+=Math.floor(jarCount(b,i)*sq.j/2)+(b.still[i]?sq.j*2:0);
+    b.jars[i]=0; b.still[i]=false;
+    sq.owner=a; b.props=b.props.filter(x=>x!==i); a.props.push(i);
+  }
+  a.cash-=o.giveCash; b.cash+=o.giveCash;
+  b.cash-=o.wantCash; a.cash+=o.wantCash;
+  renderAll();
+}
+function openModal(html){ $("modal-card").innerHTML=html; $("modal").classList.remove("hidden"); }
+function closeModal(){ $("modal").classList.add("hidden"); $("modal-card").innerHTML=""; }
+function propRow(i, side){
+  const sq=SQUARES[i];
+  const tag=sq.g?'<span class="tg">'+GROUPS[sq.g].n+'</span>':(sq.k==="shuttle"?'<span class="tg">shuttle</span>':'<span class="tg">utility</span>');
+  return '<label class="trow"><input type="checkbox" data-side="'+side+'" value="'+i+'"><span>'+sq.s+' ('+fmt(sq.p)+')</span>'+tag+'</label>';
+}
+function openTrade(p){
+  if(G.over||p.ai) return;
+  const partners=solvent().filter(q=>q!==p);
+  if(!partners.length){ addLog("Nobody left to trade with."); return; }
+  renderTradeModal(p, partners[0]);
+}
+function renderTradeModal(p, partner){
+  const partners=solvent().filter(q=>q!==p);
+  let h='<h3>🤝 Trade with '+partner.name+'</h3>';
+  h+='Partner: <select id="tr-partner">'+partners.map(q=>'<option value="'+G.players.indexOf(q)+'"'+(q===partner?" selected":"")+'>'+q.name+'</option>').join("")+'</select>';
+  h+='<h4 style="margin:10px 0 4px">You give <small style="color:var(--muted)">($'+p.cash+')</small></h4><div id="tr-give">';
+  h+=p.props.map(i=>propRow(i,"give")).join("")||'<div class="fine">No properties.</div>';
+  h+='</div>Cash: <input type="number" id="tr-givecash" min="0" value="0">';
+  h+='<h4 style="margin:10px 0 4px">You want <small style="color:var(--muted)">($'+partner.cash+')</small></h4><div id="tr-want">';
+  h+=partner.props.map(i=>propRow(i,"want")).join("")||'<div class="fine">No properties.</div>';
+  h+='</div>Cash: <input type="number" id="tr-wantcash" min="0" value="0">';
+  h+='<div class="btnrow"><button class="big sm primary" id="tr-go">Propose</button><button class="big sm" id="tr-cancel">Cancel</button></div>';
+  openModal(h);
+  $("tr-partner").onchange=e=>{ renderTradeModal(p, G.players[+e.target.value]); };
+  $("tr-cancel").onclick=()=>closeModal();
+  $("tr-go").onclick=()=>{
+    const giveProps=[...document.querySelectorAll('#tr-give input[data-side="give"]:checked')].map(x=>+x.value);
+    const wantProps=[...document.querySelectorAll('#tr-want input[data-side="want"]:checked')].map(x=>+x.value);
+    const giveCash=Math.max(0, Math.floor(+$("tr-givecash").value||0));
+    const wantCash=Math.max(0, Math.floor(+$("tr-wantcash").value||0));
+    if(giveCash>p.cash){ addLog("You don't have that much cash."); return; }
+    if(wantCash>partner.cash){ addLog(partner.name+" doesn't have that much cash."); return; }
+    const o={giveProps:giveProps, giveCash:giveCash, wantProps:wantProps, wantCash:wantCash, _from:p};
+    if(partner.ai){
+      closeModal();
+      if(aiTradeEval(partner,o)){
+        doTrade(p,partner,o); aiSay(partner,"tradeYes");
+        addLog("🤝 "+partner.name+" accepts your trade!");
+      } else {
+        aiSay(partner,"tradeNo");
+        addLog("🚫 "+partner.name+" rejects your trade.");
+      }
+      renderAll();
+    } else {
+      tradeConfirmModal(partner, p, o, ()=>{ closeModal(); renderAll(); });
+    }
+  };
+}
+function tradeConfirmModal(partner, proposer, o, done){
+  const nm=i=>SQUARES[i].s+" ("+fmt(SQUARES[i].p)+")";
+  let h='<h3>🤝 Trade offer for '+partner.name+'</h3>';
+  h+='<p>'+proposer.name+' offers:</p><ul>';
+  o.giveProps.forEach(i=>{ h+='<li>'+nm(i)+'</li>'; });
+  if(o.giveCash) h+='<li>'+fmt(o.giveCash)+' cash</li>';
+  h+='</ul><p>In exchange for:</p><ul>';
+  o.wantProps.forEach(i=>{ h+='<li>'+nm(i)+'</li>'; });
+  if(o.wantCash) h+='<li>'+fmt(o.wantCash)+' cash</li>';
+  h+='</ul><div class="btnrow"><button class="big sm primary" id="tc-yes">Accept</button><button class="big sm" id="tc-no">Decline</button></div>';
+  h+='<p class="fine">Hand the phone to '+partner.name+' — no peeking, '+proposer.name+'.</p>';
+  openModal(h);
+  $("tc-yes").onclick=()=>{ doTrade(proposer,partner,o); if(proposer.ai) aiSay(proposer,"tradeYes"); addLog("🤝 Trade accepted!"); done(); };
+  $("tc-no").onclick=()=>{ if(proposer.ai) aiSay(proposer,"tradeNo"); addLog("🚫 Trade declined."); done(); };
+}
+function maybeTradeAI(p, done){
+  if(!(p.ai.id==="vera"||p.ai.id==="june")){ later(done,0); return; }
+  if(G.turnCount-p.lastTradeTurn<4){ later(done,0); return; }
+  for(const g in GROUPS){
+    let missing=-1, mine=0;
+    for(let i=0;i<40;i++){
+      const sq=SQUARES[i]; if(sq.g!==g) continue;
+      if(sq.owner===p) mine++;
+      else if(sq.owner && !sq.owner.bankrupt && missing<0) missing=i;
+    }
+    if(mine===groupSize(g)-1 && missing>=0){
+      const owner=SQUARES[missing].owner;
+      const offer=Math.round(SQUARES[missing].p*1.25);
+      if(p.cash-offer < p.ai.reserve){ continue; }
+      p.lastTradeTurn=G.turnCount;
+      const o={giveProps:[],giveCash:offer,wantProps:[missing],wantCash:0,_from:p};
+      if(owner.ai){
+        if(aiTradeEval(owner,o)){
+          doTrade(p,owner,o); aiSay(p,"tradePropose"); aiSay(owner,"tradeYes");
+          addLog("🤝 "+p.name+" trades with "+owner.name+".");
+        }
+        later(done,0); return;
+      }
+      aiSay(p,"tradePropose");
+      tradeConfirmModal(owner, p, o, done);
+      return;
+    }
+  }
+  later(done,0);
+}
+
+/* ---------------- pass device / menu / init ---------------- */
+let passCb=null;
+function passDevice(title,sub,cb){
+  $("pass-title").textContent=title; $("pass-sub").textContent=sub; passCb=cb; show("scr-pass");
+}
+let selAI=[AIS[0],AIS[1],AIS[2],AIS[3]];
+let hsCount=2;
+function renderAiPick(){
+  const w=$("ai-pick"); w.innerHTML="";
+  AIS.forEach(ai=>{
+    const d=document.createElement("div");
+    d.className="aicard"+(selAI.indexOf(ai)>=0?" sel":"");
+    d.innerHTML="<b>"+ai.name+"</b><span>"+ai.tag+"<br>"+ai.blurb+"</span>";
+    d.onclick=()=>{
+      const ix=selAI.indexOf(ai);
+      if(ix>=0){ if(selAI.length>1) selAI.splice(ix,1); }
+      else selAI.push(ai);
+      renderAiPick();
+    };
+    w.appendChild(d);
+  });
+}
+function startGame(){
+  SQUARES.forEach(sq=>{ sq.owner=null; });
+  G.players=[]; G.turn=0; G.turnCount=0; G.over=false; G.doubles=0; G.buildMode=false; G.lastAiLine={};
+  G.tales=shuffle(TALES.slice()); G.troubles=shuffle(TROUBLES.slice());
+  const colors=["#e7a83e","#4aa3c7","#c2506b","#5da24e"];
+  const hem=["🫙","🎩","🚜","🌙"];
+  const aem={lucky:"🎲",vera:"🧊",boomer:"💥",june:"🌱"};
+  if(G.mode==="ai"){
+    G.players.push(mkPlayer("You", null, colors[0], hem[0]));
+    selAI.forEach((ai,ix)=>G.players.push(mkPlayer(ai.name, ai, colors[(ix+1)%4], aem[ai.id])));
+  } else {
+    for(let n=0;n<hsCount;n++) G.players.push(mkPlayer("Player "+(n+1), null, colors[n%4], hem[n%4]));
+  }
+  buildBoard();
+  renderAll();
+  $("chatlog").innerHTML="";
+  show("scr-game");
+  $("chatdock").classList.remove("hidden");
+  addChat("Hal","Welcome to the table. "+G.players.length+" players, $1500 each. Nobody's performing when they're down to their last jar.",false);
+  G.players.forEach(p=>{ if(p.ai) aiSay(p,"intro"); });
+  takeTurn();
+}
+$("btn-vs-ai").addEventListener("click",()=>{ G.mode="ai"; $("ai-setup").classList.remove("hidden"); $("hs-setup").classList.add("hidden"); });
+$("btn-hotseat").addEventListener("click",()=>{ G.mode="hotseat"; $("hs-setup").classList.remove("hidden"); $("ai-setup").classList.add("hidden"); });
+document.querySelectorAll("#hs-count button").forEach(b=>b.addEventListener("click",()=>{
+  hsCount=+b.dataset.n;
+  document.querySelectorAll("#hs-count button").forEach(x=>x.classList.toggle("primary",x===b));
+}));
+$("btn-start").addEventListener("click",()=>startGame());
+$("btn-rematch").addEventListener("click",()=>{ $("chatdock").classList.add("hidden"); show("scr-menu"); });
+$("btn-menu2").addEventListener("click",()=>{ $("chatdock").classList.add("hidden"); show("scr-menu"); });
+$("btn-pass-ok").addEventListener("click",()=>{ const cb=passCb; passCb=null; show("scr-game"); if(cb) cb(); });
+$("chatform").addEventListener("submit",e=>{
+  e.preventDefault();
+  const inp=$("chatin"), text=inp.value.trim();
+  if(!text) return;
+  inp.value="";
+  addChat("You", text, true);
+  aiReplyTo(text);
+});
+renderAiPick();
+if(typeof window!=="undefined" && window.__TEST){ G.test=true; }
+</script>
+</body>
+</html>

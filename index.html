@@ -44,6 +44,11 @@
   .concept{color:var(--muted);font-size:15px;line-height:1.6;margin:0 auto 30px;max-width:52ch;text-align:left}
   .concept strong{color:var(--ink)}
   .cards{display:grid;gap:14px;margin:0 0 30px}
+  .bookrow{margin:0 0 34px}
+  .bookbtn{display:inline-block;background:linear-gradient(180deg,#ffd98a,#e8a83e);color:#2a1a08;
+    font-weight:800;padding:12px 20px;border-radius:999px;text-decoration:none;
+    box-shadow:0 6px 18px rgba(0,0,0,.4)}
+  .bookbtn:hover{filter:brightness(1.06)}
   .card{display:block;text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);
     border-radius:16px;padding:22px;text-align:left;transition:transform .12s ease,border-color .12s ease}
   .card:hover{border-color:var(--gold);transform:translateY(-2px)}
@@ -60,7 +65,7 @@
   <div class="stars"></div>
   <div class="moon"></div>
   <svg class="ridge" viewBox="0 0 1440 340" preserveAspectRatio="none"><path d="M0,340 L0,230 L90,180 L170,220 L300,150 L430,215 L560,170 L700,230 L830,160 L960,220 L1100,180 L1240,235 L1360,190 L1440,225 L1440,340 Z"/></svg>
-  <div class="billboard"><div class="bb-face"><span class="bb-url">TennesseeMountainTours.com</span><span class="bb-sub">moonshine &amp; wine tours</span></div></div>
+  <div class="billboard"><a class="bb-face" href="https://tennesseemountaintours.com" target="_blank" rel="noopener" style="text-decoration:none;display:block"><span class="bb-url">TennesseeMountainTours.com</span><span class="bb-sub">moonshine &amp; wine tours</span></a></div>
 </div>
 <main>
   <div class="kicker">🫙 A game room</div>
@@ -91,7 +96,17 @@
          apprentice moonshiner — plus hot-seat 2-player on one phone.</p>
       <span class="go">Set sail →</span>
     </a>
+    <a class="card" href="moonshineopoly.html">
+      <div class="num">GAME THREE</div>
+      <h2>🫙 Moonshineopoly</h2>
+      <p>Buy up the Smokies one still at a time. Build jars and copper stills,
+         dodge Sleepin' It Off, and survive the table talk of four AI regulars —
+         including Lucky, who's still convinced the dice owe him money.</p>
+      <span class="go">Run some shine →</span>
+    </a>
   </div>
+
+  <p class="bookrow"><a class="bookbtn" href="https://tennesseemountaintours.com" target="_blank" rel="noopener">🚌 In the Smokies? Book a real moonshine &amp; wine tour →</a></p>
 
   <footer>
     Freeware — everybody plays free, everybody can build on it.<br />
